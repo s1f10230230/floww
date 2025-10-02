@@ -1,0 +1,12 @@
+{
+    "serena": {
+      "command": "cmd",
+      "args": ["/c", "uvx", "--from", "git+https://github.com/oraios/serena", "serena","start-mcp-server","--context","ide-assistant"]
+    },
+    "mcpServers": {
+      "supabase": {
+        "command": "cmd",
+        "args": ["/c", "npx", "-y", "@supabase/mcp-server-supabase@latest", "--access-token", "sbp_3413351ff87d850c1fe55bcfcf0563aa94f79271"]
+      }
+    }
+  }

@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/iniad/Documents/myapp/floww/**)",
+      "mcp__serena__activate_project",
+      "mcp__supabase__execute_sql",
+      "mcp__supabase__apply_migration"
+    ],
+    "deny": [],
+    "ask": []
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "supabase"
+  ]
+}
