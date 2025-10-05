@@ -29,13 +29,13 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     locale: 'ja_JP',
-    url: 'https://floww.vercel.app',
+    url: 'https://floww-orpin.vercel.app',
     siteName: 'Floww',
     title: 'Floww - 自動家計簿＆サブスク管理アプリ',
     description: 'Gmailと連携するだけで自動的に支出を管理。クレジットカードの利用通知メールから自動で家計簿を作成し、解約忘れのサブスクも発見できます。',
     images: [
       {
-        url: 'https://floww.vercel.app/og-image.png',
+        url: 'https://floww-orpin.vercel.app/og-image.png',
         width: 1200,
         height: 630,
         alt: 'Floww - 自動家計簿アプリ',
@@ -46,7 +46,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Floww - 自動家計簿＆サブスク管理アプリ',
     description: 'Gmailと連携するだけで自動的に支出を管理。解約忘れのサブスクも発見できます。',
-    images: ['https://floww.vercel.app/og-image.png'],
+    images: ['https://floww-orpin.vercel.app/og-image.png'],
   },
   viewport: {
     width: 'device-width',
@@ -54,10 +54,10 @@ export const metadata: Metadata = {
     maximumScale: 1,
   },
   verification: {
-    google: 'DmV8aRaFymglZFe7rfVb_cUXJ0LjtXkCyIQQ5NnDPn8',
+    google: 'uUfAgZ9C3rzRE3euxEpu-FOMYDfmbIbdGwP41gZ9pJI',
   },
   alternates: {
-    canonical: 'https://floww.vercel.app',
+    canonical: 'https://floww-orpin.vercel.app',
   },
   other: {
     'google-adsense-account': 'ca-pub-6475316584558352',
@@ -71,6 +71,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ja">
+      <head>
+        <meta name="google-site-verification" content="DmV8aRaFymglZFe7rfVb_cUXJ0LjtXkCyIQQ5NnDPn8" />
+      </head>
       <body className={inter.className}>
         <Script
           async
