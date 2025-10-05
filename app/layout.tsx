@@ -54,7 +54,7 @@ export const metadata: Metadata = {
     maximumScale: 1,
   },
   verification: {
-    google: 'google-site-verification-code', // Google Search Consoleで取得
+    google: '1b65c403b3870236',
   },
   alternates: {
     canonical: 'https://floww.vercel.app',
