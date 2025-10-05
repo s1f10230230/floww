@@ -6,7 +6,9 @@
     "dev": "next dev --turbo",
     "build": "next build",
     "start": "next start",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test:headed": "playwright test --headed",
     "notify": "node notify.js"
   },
   "keywords": [],
@@ -14,6 +16,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@stripe/stripe-js": "^8.0.0",
     "@supabase/auth-helpers-nextjs": "^0.10.0",
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.58.0",
@@ -32,7 +35,11 @@
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "recharts": "^3.2.1",
+    "stripe": "^19.1.0",
     "tailwindcss": "^4.1.13",
     "typescript": "^5.9.2"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.55.1"
   }
 }
