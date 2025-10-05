@@ -54,7 +54,7 @@ export const metadata: Metadata = {
     maximumScale: 1,
   },
   verification: {
-    google: '1b65c403b3870236',
+    google: 'DmV8aRaFymglZFe7rfVb_cUXJ0LjtXkCyIQQ5NnDPn8',
   },
   alternates: {
     canonical: 'https://floww.vercel.app',
