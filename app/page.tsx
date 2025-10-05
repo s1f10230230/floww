@@ -36,8 +36,35 @@ export default function Home() {
     }
   }
 
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    name: 'Floww',
+    applicationCategory: 'FinanceApplication',
+    operatingSystem: 'Web',
+    offers: {
+      '@type': 'Offer',
+      price: '0',
+      priceCurrency: 'JPY',
+    },
+    description: 'Gmailと連携するだけで自動的に支出を管理。クレジットカードの利用通知メールから自動で家計簿を作成し、解約忘れのサブスクも発見できます。',
+    featureList: [
+      'クレジットカード利用通知の自動読み取り',
+      'カテゴリ別支出管理',
+      'サブスクリプション検出',
+      'データ自動分類',
+    ],
+    screenshot: 'https://floww-orpin.vercel.app/og-image.png',
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+      {/* JSON-LD for SEO */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+
       {/* Hero Section */}
       <div className="container mx-auto px-4 py-8 sm:py-16">
         <div className="max-w-4xl mx-auto text-center">
