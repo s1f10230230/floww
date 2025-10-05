@@ -1,6 +1,16 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/app/lib/supabase-server'
 
+interface Transaction {
+  id: string
+  card_last4: string | null
+  amount: number
+  category: string | null
+  merchant_name: string | null
+  transaction_date: string
+  [key: string]: any
+}
+
 interface CardBreakdownData {
   cardId: string
   cardLast4: string
@@ -96,10 +106,10 @@ export async function GET(request: Request) {
       }
       acc[cardKey].push(tx)
       return acc
-    }, {} as Record<string, typeof transactions>)
+    }, {} as Record<string, Transaction[]>)
 
     // Calculate breakdown for each card
-    const cardBreakdowns: CardBreakdownData[] = Object.entries(cardGroups).map(([cardLast4, cardTxs]) => {
+    const cardBreakdowns: CardBreakdownData[] = (Object.entries(cardGroups) as [string, Transaction[]][]).map(([cardLast4, cardTxs]) => {
       const cardInfo = cardRegistry.get(cardLast4)
       const totalAmount = cardTxs.reduce((sum, tx) => sum + parseFloat(tx.amount.toString()), 0)
 

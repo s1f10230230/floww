@@ -14,11 +14,14 @@ import {
   X,
   User,
   Crown,
-  Bell,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Tag,
+  BookOpen,
+  MessageSquare
 } from 'lucide-react'
 import { createClient } from '@/app/lib/supabase-client'
+import { FlowwWordmark, FlowwIcon } from './FlowwLogo'
 
 interface AppLayoutProps {
   children: React.ReactNode
@@ -28,22 +31,26 @@ interface AppLayoutProps {
 const navigation = [
   { name: 'ダッシュボード', href: '/dashboard', icon: LayoutDashboard },
   { name: 'カード管理', href: '/cards', icon: CreditCard },
+  { name: 'カテゴリ設定', href: '/categories', icon: Tag },
   { name: '分析', href: '/analytics', icon: TrendingUp },
   { name: 'レポート', href: '/reports', icon: FileText },
+  { name: 'フィードバック', href: '/feedback', icon: MessageSquare },
+  { name: '使い方', href: '/guide', icon: BookOpen },
   { name: '設定', href: '/settings', icon: Settings },
 ]
 
 export default function AppLayout({ children, user }: AppLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true) // Default to open on desktop
-  const [isMobile, setIsMobile] = useState(false)
+  const [isMobile, setIsMobile] = useState(true) // Default to true to prevent SSR issues
   const pathname = usePathname()
   const router = useRouter()
 
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 1024)
+      const mobile = window.innerWidth < 1024
+      setIsMobile(mobile)
       // Auto-close on mobile
-      if (window.innerWidth < 1024) {
+      if (mobile) {
         setSidebarOpen(false)
       }
     }
@@ -60,25 +67,22 @@ export default function AppLayout({ children, user }: AppLayoutProps) {
 
   return (
     <div className="flex h-screen bg-gray-50">
-      {/* Mobile sidebar backdrop */}
-      {isMobile && sidebarOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black bg-opacity-50 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
       {/* Sidebar */}
       <div className={`${
-        sidebarOpen ? 'translate-x-0 w-64' : '-translate-x-full lg:translate-x-0 lg:w-16'
+        sidebarOpen ? 'translate-x-0 w-64' : '-translate-x-full lg:translate-x-0 lg:w-20'
       } fixed lg:relative inset-y-0 left-0 z-50 bg-white shadow-xl transition-all duration-300 ease-in-out flex-shrink-0`}>
         <div className="flex h-full flex-col">
           {/* Logo */}
           <div className="flex items-center justify-between px-4 h-16 border-b">
             {sidebarOpen ? (
-              <h1 className="text-2xl font-bold text-blue-600">Floww</h1>
+              <div className="flex items-center gap-2">
+                <FlowwIcon size={32} shadow={false} />
+                <FlowwWordmark size={28} />
+              </div>
             ) : (
-              <span className="text-2xl font-bold text-blue-600 lg:block hidden">F</span>
+              <div className="lg:block hidden">
+                <FlowwIcon size={32} shadow={false} />
+              </div>
             )}
             <button
               className={`${isMobile ? '' : 'lg:block'} ${sidebarOpen ? '' : 'lg:ml-auto'}`}
@@ -176,10 +180,6 @@ export default function AppLayout({ children, user }: AppLayoutProps) {
 
             {/* Right side actions */}
             <div className="flex items-center gap-4 ml-auto">
-              <button className="relative p-2 text-gray-600 hover:text-gray-900">
-                <Bell className="w-5 h-5" />
-                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
-              </button>
             </div>
           </div>
         </div>
@@ -188,6 +188,26 @@ export default function AppLayout({ children, user }: AppLayoutProps) {
         <main className="flex-1 overflow-y-auto p-6 bg-gray-50">
           {children}
         </main>
+
+        {/* Footer */}
+        <footer className="bg-white border-t border-gray-200 flex-shrink-0">
+          <div className="px-6 py-4">
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-2 text-xs text-gray-600">
+              <span>© 2024 Floww</span>
+              <div className="flex gap-4">
+                <a href="/privacy" className="hover:text-gray-900 transition-colors">
+                  プライバシーポリシー
+                </a>
+                <a href="/terms" className="hover:text-gray-900 transition-colors">
+                  利用規約
+                </a>
+                <a href="/feedback" className="hover:text-gray-900 transition-colors">
+                  お問い合わせ
+                </a>
+              </div>
+            </div>
+          </div>
+        </footer>
       </div>
     </div>
   )

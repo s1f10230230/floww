@@ -33,17 +33,17 @@ export default function UpgradePage() {
       icon: Users,
       monthlyPrice: 0,
       yearlyPrice: 0,
-      description: '個人利用の基本機能',
+      description: 'お試しに最適',
       color: 'gray',
       features: [
         { name: '最大2枚のカード登録', included: true },
         { name: 'メール自動同期', included: true },
         { name: '基本的な支出分析', included: true },
         { name: 'サブスク検出', included: true },
+        { name: 'データ保持3ヶ月のみ', included: false },
+        { name: '広告表示あり', included: false },
         { name: 'CSVエクスポート', included: false },
-        { name: 'APIアクセス', included: false },
-        { name: '優先サポート', included: false },
-        { name: 'チーム共有', included: false }
+        { name: 'APIアクセス', included: false }
       ],
       limits: {
         maxCards: 2,
@@ -52,8 +52,8 @@ export default function UpgradePage() {
       }
     },
     {
-      id: 'basic',
-      name: 'Basic',
+      id: 'standard',
+      name: 'Standard',
       icon: Star,
       monthlyPrice: 480,
       yearlyPrice: 4800,
@@ -64,62 +64,38 @@ export default function UpgradePage() {
         { name: '最大5枚のカード登録', included: true },
         { name: 'メール自動同期', included: true },
         { name: '詳細な支出分析', included: true },
-        { name: 'サブスク検出・アラート', included: true },
+        { name: '月次レポート', included: true },
+        { name: 'データ無制限保持', included: true },
+        { name: '広告なし', included: true },
         { name: 'CSVエクスポート', included: true },
-        { name: 'APIアクセス', included: false },
-        { name: '優先サポート', included: false },
-        { name: 'チーム共有', included: false }
+        { name: 'APIアクセス', included: false }
       ],
       limits: {
         maxCards: 5,
         syncFrequency: '6時間ごと',
-        dataRetention: '1年'
-      }
-    },
-    {
-      id: 'pro',
-      name: 'Pro',
-      icon: Zap,
-      monthlyPrice: 1280,
-      yearlyPrice: 12800,
-      description: 'パワーユーザー向け',
-      color: 'purple',
-      features: [
-        { name: '最大10枚のカード登録', included: true },
-        { name: 'リアルタイムメール同期', included: true },
-        { name: 'AI支出予測', included: true },
-        { name: 'サブスク最適化提案', included: true },
-        { name: '全形式エクスポート', included: true },
-        { name: 'APIアクセス', included: true },
-        { name: '優先サポート', included: true },
-        { name: 'チーム共有', included: false }
-      ],
-      limits: {
-        maxCards: 10,
-        syncFrequency: 'リアルタイム',
         dataRetention: '無制限'
       }
     },
     {
-      id: 'business',
-      name: 'Business',
-      icon: Building,
-      monthlyPrice: 4980,
-      yearlyPrice: 49800,
-      description: 'チーム・法人向け',
-      color: 'amber',
+      id: 'premium',
+      name: 'Premium',
+      icon: Zap,
+      monthlyPrice: 880,
+      yearlyPrice: 8800,
+      description: 'ヘビーユーザー向け',
+      color: 'purple',
       features: [
-        { name: '無制限のカード登録', included: true },
+        { name: '最大10枚のカード登録', included: true },
         { name: 'リアルタイムメール同期', included: true },
-        { name: 'AI支出予測・最適化', included: true },
-        { name: '経費精算システム連携', included: true },
-        { name: '全形式エクスポート', included: true },
-        { name: 'APIアクセス', included: true },
-        { name: '24/7優先サポート', included: true },
-        { name: 'チーム共有・管理', included: true }
+        { name: '高度な支出分析', included: true },
+        { name: '月次レポート', included: true },
+        { name: 'データ無制限保持', included: true },
+        { name: '広告なし', included: true },
+        { name: 'CSVエクスポート', included: true },
+        { name: 'APIアクセス', included: true }
       ],
       limits: {
-        maxCards: '無制限',
+        maxCards: 10,
         syncFrequency: 'リアルタイム',
         dataRetention: '無制限'
       }
@@ -154,26 +130,57 @@ export default function UpgradePage() {
   }
 
   const handleUpgrade = async (planId: string) => {
-    setLoading(true)
+    if (planId === 'free') {
+      // Free plan doesn't need payment
+      const supabase = createClient()
+      const { data: freePlan } = await supabase
+        .from('subscription_plans')
+        .select('id')
+        .eq('name', 'Free')
+        .single()
 
-    // In a real app, this would integrate with a payment provider
-    alert(`${plans.find(p => p.id === planId)?.name}プランへのアップグレード処理を実装予定です`)
+      if (freePlan) {
+        await supabase
+          .from('profiles')
+          .update({
+            plan_id: freePlan.id,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', user.id)
 
-    // Update user's plan in database
-    const supabase = createClient()
-    const { error } = await supabase
-      .from('profiles')
-      .update({
-        plan_id: planId,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', user.id)
-
-    if (!error) {
-      router.push('/dashboard')
+        router.push('/dashboard')
+      }
+      return
     }
 
-    setLoading(false)
+    setLoading(true)
+
+    try {
+      // Create Stripe Checkout session
+      const response = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          planId,
+          billingPeriod,
+        }),
+      })
+
+      const { url, error } = await response.json()
+
+      if (error) {
+        alert(`エラー: ${error}`)
+      } else if (url) {
+        // Redirect to Stripe Checkout
+        window.location.href = url
+      }
+    } catch (error: any) {
+      alert(`エラーが発生しました: ${error.message}`)
+    } finally {
+      setLoading(false)
+    }
   }
 
   const getPrice = (plan: any) => {

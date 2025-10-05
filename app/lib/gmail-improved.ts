@@ -154,6 +154,13 @@ export class ImprovedGmailClient {
 
       return response.data.history || []
     } catch (error) {
+      // Propagate 404 so caller can clear history and fallback to full sync
+      const code: any = (error as any)?.code || (error as any)?.response?.status
+      if (code === 404) {
+        const err = new Error('HISTORY_OUT_OF_RANGE') as any
+        err.code = 404
+        throw err
+      }
       console.error('Error fetching history:', error)
       return []
     }

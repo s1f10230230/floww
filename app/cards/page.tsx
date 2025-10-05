@@ -13,9 +13,11 @@ import {
   X,
   AlertCircle
 } from 'lucide-react'
+import { useToast, ToastContainer } from '@/app/components/Toast'
 
 export default function CardsPage() {
   const router = useRouter()
+  const toast = useToast()
   const [user, setUser] = useState<any>(null)
   const [cards, setCards] = useState<any[]>([])
   const [cardIssuers, setCardIssuers] = useState<any[]>([])
@@ -24,6 +26,13 @@ export default function CardsPage() {
   const [showAddModal, setShowAddModal] = useState(false)
   const [editingCard, setEditingCard] = useState<any>(null)
   const [userPlan, setUserPlan] = useState<any>(null)
+  const [editingIssuer, setEditingIssuer] = useState<any | null>(null)
+  const [issuerFilters, setIssuerFilters] = useState<{ include_from_domains: string, exclude_from_domains: string, include_subject_keywords: string, exclude_subject_keywords: string }>({
+    include_from_domains: '',
+    exclude_from_domains: '',
+    include_subject_keywords: '',
+    exclude_subject_keywords: ''
+  })
 
   useEffect(() => {
     loadData()
@@ -82,13 +91,13 @@ export default function CardsPage() {
 
     // Validate user is logged in
     if (!user || !user.id) {
-      alert('ユーザー情報が取得できません。再ログインしてください。')
+      toast.error('ユーザー情報が取得できません。再ログインしてください。')
       return
     }
 
     // Check card limit
     if (userPlan && cards.length >= userPlan.max_cards) {
-      alert(`${userPlan.name}プランでは最大${userPlan.max_cards}枚までしか登録できません`)
+      toast.error(`${userPlan.name}プランでは最大${userPlan.max_cards}枚までしか登録できません`)
       return
     }
 
@@ -104,10 +113,10 @@ export default function CardsPage() {
 
     if (error) {
       console.error('Card insertion error:', error)
-      alert(`カード追加に失敗しました: ${error.message}`)
+      toast.error(`カード追加に失敗しました: ${error.message}`)
     } else {
       console.log('Card added successfully')
-      alert('カードを追加しました！')
+      toast.success('カードを追加しました！')
       loadData()
       setShowAddModal(false)
     }
@@ -132,15 +141,47 @@ export default function CardsPage() {
     const existingIssuer = userIssuers.find(ui => ui.issuer_id === issuerId)
 
     if (existingIssuer) {
-      // Remove issuer
+      // Confirmation dialog with option to delete transactions
+      const issuer = cardIssuers.find(i => i.id === issuerId)
+      const issuerName = issuer?.name || 'このカード会社'
+
+      const shouldDelete = window.confirm(
+        `${issuerName}のメール同期をOFFにしますか？\n\n` +
+        `OFFにすると、このカード会社からの新しいメールは同期されなくなります。\n` +
+        `既存の取引データは残ります。`
+      )
+
+      if (!shouldDelete) return
+
+      // Ask if they want to delete transaction data too
+      const deleteTransactions = window.confirm(
+        `取引データも削除しますか？\n\n` +
+        `⚠️ 「OK」を押すと、${issuerName}の取引データがすべて削除されます（復元できません）。\n` +
+        `「キャンセル」を押すと、取引データは残ります。`
+      )
+
+      // Remove from user_card_issuers
       await supabase
         .from('user_card_issuers')
         .delete()
         .eq('id', existingIssuer.id)
+
+      // If user wants to delete transactions
+      if (deleteTransactions) {
+        await supabase
+          .from('transactions')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('issuer_id', issuerId)
+
+        toast.success('メール同期をOFFにし、取引データを削除しました')
+      } else {
+        toast.success('メール同期をOFFにしました（取引データは残っています）')
+      }
     } else {
       // Check limit
       if (userPlan && userIssuers.length >= userPlan.max_cards) {
-        alert(`${userPlan.name}プランでは最大${userPlan.max_cards}社まで登録できます`)
+        toast.error(`${userPlan.name}プランでは最大${userPlan.max_cards}社まで登録できます`)
         return
       }
 
@@ -151,20 +192,24 @@ export default function CardsPage() {
           user_id: user.id,
           issuer_id: issuerId
         })
+
+      toast.success('メール同期をONにしました')
     }
 
     loadData()
   }
 
   return (
-    <AppLayout user={user}>
-      <div className="max-w-6xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
+    <>
+      <ToastContainer toasts={toast.toasts} onRemove={toast.removeToast} />
+      <AppLayout user={user}>
+      <div className="max-w-6xl mx-auto px-4 sm:px-0">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
           <h1 className="text-2xl font-bold text-gray-900">カード管理</h1>
           <button
             onClick={() => setShowAddModal(true)}
             disabled={userPlan && cards.length >= userPlan.max_cards}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center justify-center gap-2 px-4 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium w-full sm:w-auto"
           >
             <Plus className="w-4 h-4" />
             カードを追加
@@ -194,7 +239,7 @@ export default function CardsPage() {
           </div>
         )}
 
-        <div className="grid lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           {/* Registered Cards */}
           <div>
             <h2 className="text-lg font-semibold mb-4">登録済みカード</h2>
@@ -256,10 +301,10 @@ export default function CardsPage() {
             <div className="bg-white rounded-lg border p-4">
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
                 <p className="text-sm text-blue-900 mb-2">
-                  <strong>💳 カード会社の選択</strong>
+                  <strong>💳 メール同期設定</strong>
                 </p>
                 <p className="text-sm text-blue-800">
-                  選択したカード会社からの利用通知メールを自動で取得します。
+                  ONにしたカード会社からの利用通知メールを同期します。OFFにしても既存の取引データは残ります。
                   {userPlan && (
                     <span className="block mt-1 font-medium">
                       現在のプラン: 最大{userPlan.max_cards}社まで登録可能
@@ -271,20 +316,37 @@ export default function CardsPage() {
                 {cardIssuers.map((issuer) => {
                   const isSelected = userIssuers.some(ui => ui.issuer_id === issuer.id)
                   return (
-                    <button
-                      key={issuer.id}
-                      onClick={() => toggleIssuer(issuer.id)}
-                      className={`w-full flex items-center justify-between p-3 rounded-lg border transition-colors ${
-                        isSelected
-                          ? 'bg-blue-50 border-blue-300'
-                          : 'hover:bg-gray-50'
-                      }`}
-                    >
+                    <div key={issuer.id} className={`w-full flex items-center justify-between p-3 rounded-lg border transition-colors ${
+                      isSelected ? 'bg-blue-50 border-blue-300' : 'hover:bg-gray-50'
+                    }`}>
                       <span className="font-medium">{issuer.name}</span>
-                      {isSelected && (
-                        <Check className="w-5 h-5 text-blue-600" />
-                      )}
-                    </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => toggleIssuer(issuer.id)}
+                          className={`text-sm px-3 py-1.5 rounded font-medium transition-colors ${
+                            isSelected
+                              ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          }`}
+                        >
+                          {isSelected ? '✓ ON' : 'OFF'}
+                        </button>
+                        <button
+                          onClick={() => {
+                            setEditingIssuer(issuer)
+                            setIssuerFilters({
+                              include_from_domains: (issuer.include_from_domains || []).join(', '),
+                              exclude_from_domains: (issuer.exclude_from_domains || []).join(', '),
+                              include_subject_keywords: (issuer.include_subject_keywords || []).join(', '),
+                              exclude_subject_keywords: (issuer.exclude_subject_keywords || []).join(', ')
+                            })
+                          }}
+                          className="text-sm px-2 py-1 rounded bg-white border hover:bg-gray-50"
+                        >
+                          設定
+                        </button>
+                      </div>
+                    </div>
                   )
                 })}
               </div>
@@ -314,7 +376,7 @@ export default function CardsPage() {
 
                   // Validate issuer_id
                   if (!issuer_id) {
-                    alert('カード会社を選択してください')
+                    toast.error('カード会社を選択してください')
                     return
                   }
 
@@ -401,7 +463,102 @@ export default function CardsPage() {
             </div>
           </div>
         )}
+
+        {/* Issuer Filter Modal */}
+        {editingIssuer && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+            onClick={() => setEditingIssuer(null)}
+          >
+            <div
+              className="bg-white rounded-lg p-6 w-full max-w-2xl shadow-2xl mx-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="text-lg font-semibold mb-2">{editingIssuer.name} のメールフィルタ</h3>
+              <p className="text-sm text-gray-600 mb-4">Fromドメインと件名キーワードの含める/除外をカンマ区切りで指定します。</p>
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">含めるFromドメイン</label>
+                  <input
+                    className="w-full px-3 py-2 border rounded-lg"
+                    value={issuerFilters.include_from_domains}
+                    onChange={(e) => setIssuerFilters(prev => ({ ...prev, include_from_domains: e.target.value }))}
+                    placeholder="mail.rakuten-card.co.jp, pay.rakuten.co.jp"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">除外するFromドメイン</label>
+                  <input
+                    className="w-full px-3 py-2 border rounded-lg"
+                    value={issuerFilters.exclude_from_domains}
+                    onChange={(e) => setIssuerFilters(prev => ({ ...prev, exclude_from_domains: e.target.value }))}
+                    placeholder="news.example.jp"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">含める件名キーワード</label>
+                  <input
+                    className="w-full px-3 py-2 border rounded-lg"
+                    value={issuerFilters.include_subject_keywords}
+                    onChange={(e) => setIssuerFilters(prev => ({ ...prev, include_subject_keywords: e.target.value }))}
+                    placeholder="カード利用のお知らせ, ご請求, ご利用内容確認メール"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">除外する件名キーワード</label>
+                  <input
+                    className="w-full px-3 py-2 border rounded-lg"
+                    value={issuerFilters.exclude_subject_keywords}
+                    onChange={(e) => setIssuerFilters(prev => ({ ...prev, exclude_subject_keywords: e.target.value }))}
+                    placeholder="ニュース, キャンペーン, クーポン"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end gap-3 mt-6">
+                <button
+                  onClick={() => setEditingIssuer(null)}
+                  className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                >
+                  キャンセル
+                </button>
+                <button
+                  onClick={async () => {
+                    try {
+                      const supabase = createClient()
+                      const toArr = (s: string) => s.split(',').map(v => v.trim()).filter(Boolean)
+                      const payload: any = {
+                        include_from_domains: toArr(issuerFilters.include_from_domains),
+                        exclude_from_domains: toArr(issuerFilters.exclude_from_domains),
+                        include_subject_keywords: toArr(issuerFilters.include_subject_keywords),
+                        exclude_subject_keywords: toArr(issuerFilters.exclude_subject_keywords)
+                      }
+                      const { error } = await supabase
+                        .from('card_issuers')
+                        .update(payload)
+                        .eq('id', editingIssuer.id)
+                      if (error) {
+                        console.error('Failed to update issuer filters:', error)
+                        toast.error(`保存に失敗しました（管理者権限が必要な可能性があります）: ${error.message}`)
+                      } else {
+                        toast.success('フィルタを保存しました')
+                        setEditingIssuer(null)
+                        loadData()
+                      }
+                    } catch (e: any) {
+                      console.error(e)
+                      toast.error(`保存時にエラーが発生しました: ${e?.message || e}`)
+                    }
+                  }}
+                  className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+                >
+                  保存
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
-    </AppLayout>
+      </AppLayout>
+    </>
   )
 }

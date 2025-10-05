@@ -6,30 +6,18 @@ import { createClient } from '@/app/lib/supabase-client'
 import AppLayout from '@/app/components/AppLayout'
 import {
   User,
-  Mail,
-  CreditCard,
-  Bell,
   Shield,
-  Palette,
-  ChevronRight,
-  Check
+  ChevronRight
 } from 'lucide-react'
+import { useToast, ToastContainer } from '@/app/components/Toast'
 
 export default function Settings() {
   const router = useRouter()
+  const toast = useToast()
   const [user, setUser] = useState<any>(null)
   const [profile, setProfile] = useState<any>(null)
   const [loading, setLoading] = useState(false)
   const [activeTab, setActiveTab] = useState('profile')
-
-  // Notification settings
-  const [notifications, setNotifications] = useState({
-    emailSummary: true,
-    subscriptionAlert: true,
-    unusualSpending: false,
-    weeklyReport: false,
-    monthlyReport: true
-  })
 
   useEffect(() => {
     loadUserData()
@@ -69,21 +57,20 @@ export default function Settings() {
       .eq('id', user.id)
 
     if (!error) {
-      alert('プロフィールを更新しました')
+      toast.success('プロフィールを更新しました')
     }
     setLoading(false)
   }
 
   const tabs = [
     { id: 'profile', name: 'プロフィール', icon: User },
-    { id: 'cards', name: 'カード設定', icon: CreditCard },
-    { id: 'notifications', name: '通知', icon: Bell },
     { id: 'privacy', name: 'プライバシー', icon: Shield },
-    { id: 'appearance', name: '表示設定', icon: Palette },
   ]
 
   return (
-    <AppLayout user={user}>
+    <>
+      <ToastContainer toasts={toast.toasts} onRemove={toast.removeToast} />
+      <AppLayout user={user}>
       <div className="max-w-6xl mx-auto">
         <h1 className="text-2xl font-bold text-gray-900 mb-6">設定</h1>
 
@@ -172,78 +159,6 @@ export default function Settings() {
                 </div>
               )}
 
-              {activeTab === 'cards' && (
-                <div>
-                  <h2 className="text-lg font-semibold mb-4">カード設定</h2>
-
-                  <div className="mb-6">
-                    <h3 className="text-sm font-medium text-gray-700 mb-3">登録カード会社</h3>
-                    <div className="space-y-2">
-                      {['楽天カード', '三井住友カード', 'JCBカード'].map((card) => (
-                        <div key={card} className="flex items-center justify-between p-3 border rounded-lg">
-                          <span>{card}</span>
-                          <button className="text-red-500 text-sm hover:text-red-600">
-                            削除
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                    <button
-                      onClick={() => router.push('/cards')}
-                      className="mt-4 px-4 py-2 border border-blue-500 text-blue-500 rounded-lg hover:bg-blue-50"
-                    >
-                      カード管理画面へ
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {activeTab === 'notifications' && (
-                <div>
-                  <h2 className="text-lg font-semibold mb-4">通知設定</h2>
-
-                  <div className="space-y-4">
-                    {Object.entries({
-                      emailSummary: 'メールサマリー',
-                      subscriptionAlert: 'サブスク更新アラート',
-                      unusualSpending: '異常な支出の通知',
-                      weeklyReport: '週次レポート',
-                      monthlyReport: '月次レポート'
-                    }).map(([key, label]) => (
-                      <div key={key} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div>
-                          <p className="font-medium">{label}</p>
-                          <p className="text-sm text-gray-500">
-                            {key === 'emailSummary' && '毎日の支出サマリーをメールで受け取る'}
-                            {key === 'subscriptionAlert' && 'サブスクの更新前に通知を受け取る'}
-                            {key === 'unusualSpending' && '通常と異なる支出パターンを検知したら通知'}
-                            {key === 'weeklyReport' && '週間の支出レポートを受け取る'}
-                            {key === 'monthlyReport' && '月間の支出レポートを受け取る'}
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => setNotifications({
-                            ...notifications,
-                            [key]: !notifications[key as keyof typeof notifications]
-                          })}
-                          className={`w-12 h-6 rounded-full transition-colors ${
-                            notifications[key as keyof typeof notifications]
-                              ? 'bg-blue-500'
-                              : 'bg-gray-300'
-                          }`}
-                        >
-                          <div className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${
-                            notifications[key as keyof typeof notifications]
-                              ? 'translate-x-6'
-                              : 'translate-x-0.5'
-                          }`} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
               {activeTab === 'privacy' && (
                 <div>
                   <h2 className="text-lg font-semibold mb-4">プライバシー設定</h2>
@@ -279,55 +194,11 @@ export default function Settings() {
                 </div>
               )}
 
-              {activeTab === 'appearance' && (
-                <div>
-                  <h2 className="text-lg font-semibold mb-4">表示設定</h2>
-
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-3">
-                        テーマ
-                      </label>
-                      <div className="grid grid-cols-3 gap-3">
-                        {['ライト', 'ダーク', 'システム'].map((theme) => (
-                          <button
-                            key={theme}
-                            className="p-3 border-2 rounded-lg hover:border-blue-500 transition-colors"
-                          >
-                            {theme}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-3">
-                        通貨表示
-                      </label>
-                      <select className="w-full px-3 py-2 border rounded-lg">
-                        <option>円 (¥)</option>
-                        <option>ドル ($)</option>
-                        <option>ユーロ (€)</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-3">
-                        日付形式
-                      </label>
-                      <select className="w-full px-3 py-2 border rounded-lg">
-                        <option>YYYY/MM/DD</option>
-                        <option>MM/DD/YYYY</option>
-                        <option>DD/MM/YYYY</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         </div>
       </div>
-    </AppLayout>
+      </AppLayout>
+    </>
   )
 }

@@ -19,6 +19,11 @@ function toHalfWidth(input: string): string {
 // 楽天カード parser
 export function parseRakutenCardEmail(from: string, subject: string, bodyText: string, bodyHtml: string): CreditCardTransaction[] | null {
   try {
+    // Skip 速報版 (preliminary notification) - wait for confirmed details
+    if (subject.includes('速報版') || bodyText.includes('速報版') || bodyText.includes('詳細な情報は、後日配信される')) {
+      return null
+    }
+
     // Check if it's a Rakuten Card statement
     if (!subject.includes('楽天カード') && !subject.includes('利用明細') && !subject.includes('請求') && !subject.includes('ご利用')) {
       return null
@@ -47,6 +52,24 @@ export function parseRakutenCardEmail(from: string, subject: string, bodyText: s
       const match = text.match(pattern)
       if (match) {
         totalAmount = parseInt((match[2] || match[1]).replace(/[,￥¥]/g, ''))
+        break
+      }
+    }
+
+    // Extract payment date (for billing notifications)
+    let paymentDate: Date | undefined
+    const payDatePatterns = [
+      /お支払い日[:：]\s*(\d{4})[年\/]\s*(\d{1,2})[月\/]\s*(\d{1,2})日?/,
+      /口座振替日[:：]\s*(\d{4})[年\/]\s*(\d{1,2})[月\/]\s*(\d{1,2})日?/
+    ]
+
+    for (const pd of payDatePatterns) {
+      const m = text.match(pd)
+      if (m) {
+        const y = parseInt(m[1])
+        const mo = parseInt(m[2])
+        const d = parseInt(m[3])
+        paymentDate = new Date(y, mo - 1, d)
         break
       }
     }
@@ -83,6 +106,23 @@ export function parseRakutenCardEmail(from: string, subject: string, bodyText: s
           category: detectCreditCardCategory(merchant)
         })
       }
+    }
+
+    // If no line items but total exists, create a billing transaction entry
+    if (transactions.length === 0 && typeof totalAmount === 'number' && totalAmount > 0) {
+      const date = paymentDate || (statementMonth
+        ? new Date(parseInt(statementMonth.split('-')[0]), parseInt(statementMonth.split('-')[1]) - 1, 1)
+        : new Date())
+
+      transactions.push({
+        merchant: '楽天カード 請求',
+        amount: totalAmount,
+        date,
+        cardBrand: '楽天カード',
+        statementMonth,
+        totalAmount,
+        category: detectCreditCardCategory('楽天カード')
+      })
     }
 
     return transactions.length > 0 ? transactions : null
@@ -168,8 +208,25 @@ export function parseSMBCCardEmail(from: string, subject: string, bodyText: stri
 // JCBカード parser
 export function parseJCBCardEmail(from: string, subject: string, bodyText: string, bodyHtml: string): CreditCardTransaction[] | null {
   try {
-    // Check if it's a JCB Card statement or notification
-    if (!subject.includes('JCB') && !subject.includes('MyJCB') && !from.toLowerCase().includes('jcb') && !bodyText.includes('JCBカード')) {
+    // Check if it's a JCB Card statement or notification (broadened conditions)
+    const lowerFrom = (from || '').toLowerCase()
+    const lowerSubject = (subject || '').toLowerCase()
+    const textPreview = (bodyText || '')
+
+    const fromDomainMatched = lowerFrom.includes('jcb.co.jp') || lowerFrom.includes('myjcb')
+    const brandKeywordMatched =
+      lowerSubject.includes('jcb') ||
+      textPreview.includes('JCBカード') ||
+      lowerSubject.includes('myjcb')
+
+    const notifyKeywordMatched =
+      subject.includes('ショッピングご利用のお知らせ') ||
+      subject.includes('カードご利用通知') ||
+      subject.includes('ご利用のお知らせ') ||
+      textPreview.includes('カードご利用通知') ||
+      textPreview.includes('ご利用のお知らせ')
+
+    if (!(fromDomainMatched || brandKeywordMatched) || !(notifyKeywordMatched || textPreview.includes('【ご利用金額】') || textPreview.includes('【ご利用先】'))) {
       return null
     }
 
@@ -199,6 +256,26 @@ export function parseJCBCardEmail(from: string, subject: string, bodyText: strin
     ]
 
     const text = toHalfWidth(bodyText)
+
+    // Attempt to extract a more specific card brand (e.g., JCBカードW NL)
+    // Examples: "カード名称　：　【ＯＳ】ＪＣＢカードＷ　ＮＬ"
+    let detectedCardBrand: string | undefined
+    const cardNamePatterns = [
+      /カード名称\s*[:：]\s*(.+)/,
+      /カード名\s*[:：]\s*(.+)/
+    ]
+
+    for (const cp of cardNamePatterns) {
+      const m = text.match(cp)
+      if (m && m[1]) {
+        // Remove decorative brackets like 【ＯＳ】
+        const raw = m[1].replace(/【[^】]*】/g, '').trim()
+        if (raw) {
+          detectedCardBrand = raw
+          break
+        }
+      }
+    }
     for (const pattern of patterns) {
       let match
       pattern.lastIndex = 0 // Reset regex state
@@ -239,7 +316,7 @@ export function parseJCBCardEmail(from: string, subject: string, bodyText: strin
                 merchant: merchant.trim(),
                 amount,
                 date,
-                cardBrand: 'JCB',
+                cardBrand: detectedCardBrand || 'JCB',
                 category: detectCreditCardCategory(merchant)
               })
 
@@ -389,7 +466,7 @@ export function isCreditCardEmail(from: string, subject: string): boolean {
     'rakuten-card.co.jp','smbc-card.com','vpass.ne.jp','jcb.co.jp','aeoncard.co.jp','eposcard.co.jp','orico.co.jp','viewcard.co.jp','d-card.jp','saisoncard.co.jp','paypay-card.co.jp','americanexpress.com','kddi.com'
   ]
 
-  const intentKeywords = ['明細','請求','利用','ご利用','お支払い','請求額','請求金額','ご請求','利用通知','利用のお知らせ','ご利用の確認']
+  const intentKeywords = ['明細','請求','利用','ご利用','お支払い','請求額','請求金額','ご請求','利用通知','利用のお知らせ','ご利用の確認','ショッピングご利用','カードご利用通知']
 
   const companyMatched = companyKeywords.some(k => lowerFrom.includes(k.toLowerCase()) || lowerSubject.includes(k.toLowerCase()))
     || companyDomains.some(d => lowerFrom.includes(d))

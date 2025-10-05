@@ -2,6 +2,7 @@
 
 import { parseAmazonEmail, isAmazonEmail } from './email-parsers/amazon'
 import { parseRakutenEmail, isRakutenEmail } from './email-parsers/rakuten'
+import { parseRakutenPayEmail, isRakutenPayEmail } from './email-parsers/rakuten-pay'
 import {
   parseRakutenCardEmail,
   parseSMBCCardEmail,
@@ -44,6 +45,22 @@ function normalizeText(input: string): string {
     .replace(/\r/g, '\n')
     .replace(/\u00A0/g, ' ')
     .replace(/\s+\n/g, '\n')
+}
+
+function htmlToText(html: string): string {
+  if (!html) return ''
+  return html
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|div|li|tr|h\d)>/gi, '\n')
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
 }
 
 function parseEmailAddress(from: string): { name?: string, email?: string, domain?: string } {
@@ -289,12 +306,13 @@ export function parseEmailV2(
   const transactions: ParsedTransaction[] = []
   const bodyTextNorm = normalizeText(bodyText || '')
   const bodyHtmlNorm = normalizeText(bodyHtml || '')
+  const bodyTextEffective = bodyTextNorm || normalizeText(htmlToText(bodyHtml || ''))
   const fromParts = parseEmailAddress(from || '')
 
   try {
     // Try Amazon parser
     if (isAmazonEmail(from, subject)) {
-      const amazonTransaction = parseAmazonEmail(from, subject, bodyText, bodyHtml)
+      const amazonTransaction = parseAmazonEmail(from, subject, bodyTextEffective, bodyHtmlNorm)
       if (amazonTransaction) {
         transactions.push(amazonTransaction)
         metadata.emailType = 'order'
@@ -304,9 +322,19 @@ export function parseEmailV2(
 
     // Try Rakuten parser
     else if (isRakutenEmail(from, subject)) {
-      const rakutenTransaction = parseRakutenEmail(from, subject, bodyText, bodyHtml)
+      const rakutenTransaction = parseRakutenEmail(from, subject, bodyTextEffective, bodyHtmlNorm)
       if (rakutenTransaction) {
         transactions.push(rakutenTransaction)
+        metadata.emailType = 'order'
+        metadata.confidence = 0.9
+      }
+    }
+
+    // Rakuten Pay app usage confirmation
+    else if (isRakutenPayEmail(from, subject)) {
+      const rp = parseRakutenPayEmail(from, subject, bodyTextEffective, bodyHtmlNorm)
+      if (rp) {
+        transactions.push(rp)
         metadata.emailType = 'order'
         metadata.confidence = 0.9
       }
@@ -326,7 +354,7 @@ export function parseEmailV2(
       ]
 
       for (const parser of cardParsers) {
-        const cardTransactions = parser(from, subject, bodyText, bodyHtml)
+        const cardTransactions = parser(from, subject, bodyTextEffective, bodyHtmlNorm)
         if (cardTransactions && cardTransactions.length > 0) {
           transactions.push(...cardTransactions)
           metadata.confidence = 0.85
@@ -337,7 +365,7 @@ export function parseEmailV2(
 
     // Try Yahoo Shopping
     else if (from.includes('yahoo') || subject.includes('Yahoo')) {
-      const yahooTransaction = parseYahooEmail(from, subject, bodyText, bodyHtml)
+      const yahooTransaction = parseYahooEmail(from, subject, bodyTextEffective, bodyHtmlNorm)
       if (yahooTransaction) {
         transactions.push(yahooTransaction)
         metadata.emailType = 'order'
@@ -347,7 +375,7 @@ export function parseEmailV2(
 
     // Try Mercari
     else if (from.includes('mercari') || subject.includes('メルカリ')) {
-      const mercariTransaction = parseMercariEmail(from, subject, bodyText, bodyHtml)
+      const mercariTransaction = parseMercariEmail(from, subject, bodyTextEffective, bodyHtmlNorm)
       if (mercariTransaction) {
         transactions.push(mercariTransaction)
         metadata.emailType = 'order'
@@ -357,7 +385,7 @@ export function parseEmailV2(
 
     // Try ZOZOTOWN
     else if (from.includes('zozo') || subject.includes('ZOZO')) {
-      const zozoTransaction = parseZozoEmail(from, subject, bodyText, bodyHtml)
+      const zozoTransaction = parseZozoEmail(from, subject, bodyTextEffective, bodyHtmlNorm)
       if (zozoTransaction) {
         transactions.push(zozoTransaction)
         metadata.emailType = 'order'
@@ -467,9 +495,47 @@ export function detectSubscriptionsV2(transactions: ParsedTransaction[]): Map<st
 
   const subscriptions = new Map<string, any>()
 
+  // Helper to detect overseas transactions or transport charges
+  const isOverseasOrTransport = (merchant: string): { isOverseas: boolean; isTransport: boolean; category: string } => {
+    const m = merchant.toLowerCase()
+    const isOverseas = m.includes('海外') || m.includes('foreign') || m.includes('international') || m.includes('海外利用')
+    const isTransport = m.includes('pasmo') || m.includes('suica') || m.includes('icoca') || m.includes('交通費') || m.includes('チャージ') || m.includes('manaca') || m.includes('nimoca') || m.includes('toica')
+
+    let category = ''
+    if (isOverseas) category = '海外利用'
+    else if (isTransport) category = '交通費'
+
+    return { isOverseas, isTransport, category }
+  }
+
   merchantGroups.forEach((group, key) => {
     // Filter out transactions without valid dates
     const validTransactions = group.filter(t => t.date && t.date instanceof Date && !isNaN(t.date.getTime()))
+
+    // Check if this is overseas or transport
+    const firstMerchant = validTransactions[0]?.merchant || ''
+    const { isOverseas, isTransport, category } = isOverseasOrTransport(firstMerchant)
+
+    // Overseas: 1+ occurrence = recurring (always suspicious)
+    // Transport: 2+ occurrences = recurring
+    if ((isOverseas && validTransactions.length >= 1) || (isTransport && validTransactions.length >= 2)) {
+      const [merchant, amount] = key.split('_')
+      const lastTransaction = validTransactions[validTransactions.length - 1]
+      const firstTransaction = validTransactions[0]
+
+      subscriptions.set(key, {
+        serviceName: merchant,
+        amount: parseFloat(amount),
+        billingCycle: 'monthly', // default
+        transactionCount: validTransactions.length,
+        lastDetected: lastTransaction.date,
+        firstDetected: firstTransaction.date,
+        confidence: isOverseas ? 0.9 : 0.7, // Higher confidence for overseas
+        category,
+        nextBillingDate: new Date(lastTransaction.date.getTime() + 30 * 24 * 60 * 60 * 1000) // +30 days
+      })
+      return // Skip regular interval detection
+    }
 
     // Need at least 2 transactions to detect pattern
     if (validTransactions.length >= 2) {
@@ -528,6 +594,7 @@ export function detectSubscriptionsV2(transactions: ParsedTransaction[]): Map<st
           lastDetected: lastTransaction.date,
           firstDetected: firstTransaction.date,
           confidence,
+          category: 'サブスク', // Regular subscription
           nextBillingDate: new Date(lastTransaction.date.getTime() + avgInterval)
         })
       }

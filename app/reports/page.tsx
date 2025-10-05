@@ -47,13 +47,22 @@ export default function ReportsPage() {
     const startDate = startOfMonth(selectedMonth)
     const endDate = endOfMonth(selectedMonth)
 
-    const { data: transactionsData } = await supabase
+    // First get all transactions with emails
+    const { data: allTransactionsData } = await supabase
       .from('transactions')
-      .select('*')
+      .select('*, emails(received_at)')
       .eq('user_id', user.id)
-      .gte('transaction_date', startDate.toISOString())
-      .lte('transaction_date', endDate.toISOString())
-      .order('transaction_date', { ascending: false })
+
+    // Filter by received_at date on client side
+    const transactionsData = allTransactionsData?.filter(t => {
+      const displayDate = (t as any).emails?.received_at || t.transaction_date
+      const date = new Date(displayDate)
+      return date >= startDate && date <= endDate
+    }).sort((a, b) => {
+      const dateA = new Date((a as any).emails?.received_at || a.transaction_date)
+      const dateB = new Date((b as any).emails?.received_at || b.transaction_date)
+      return dateB.getTime() - dateA.getTime()
+    })
 
     setTransactions(transactionsData || [])
 
@@ -102,7 +111,8 @@ export default function ReportsPage() {
     let csv = 'Date,Merchant,Category,Amount,Item\n'
 
     transactions.forEach(t => {
-      csv += `"${format(new Date(t.transaction_date), 'yyyy-MM-dd')}","${t.merchant}","${t.category || ''}","${t.amount}","${t.item_name || ''}"\n`
+      const displayDate = (t as any).emails?.received_at || t.transaction_date
+      csv += `"${format(new Date(displayDate), 'yyyy-MM-dd')}","${t.merchant}","${t.category || ''}","${t.amount}","${t.item_name || ''}"\n`
     })
 
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
@@ -125,21 +135,22 @@ export default function ReportsPage() {
   return (
     <AppLayout user={user}>
       <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">レポート</h1>
-          <div className="flex items-center gap-3">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">レポート</h1>
+          <div className="flex flex-col sm:flex-row gap-3">
             <input
               type="month"
               value={format(selectedMonth, 'yyyy-MM')}
               onChange={(e) => setSelectedMonth(new Date(e.target.value))}
-              className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full sm:w-auto px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <button
               onClick={exportCSV}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+              className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 w-full sm:w-auto"
             >
               <Download className="w-4 h-4" />
-              CSVダウンロード
+              <span className="hidden sm:inline">CSVダウンロード</span>
+              <span className="sm:hidden">CSV</span>
             </button>
           </div>
         </div>
@@ -150,11 +161,11 @@ export default function ReportsPage() {
           <>
             {/* Report Tabs */}
             <div className="bg-white rounded-xl shadow mb-6">
-              <div className="border-b">
-                <div className="flex">
+              <div className="border-b overflow-x-auto">
+                <div className="flex min-w-max">
                   <button
                     onClick={() => setReportType('monthly')}
-                    className={`px-6 py-3 font-medium border-b-2 transition-colors ${
+                    className={`px-4 sm:px-6 py-3 font-medium border-b-2 transition-colors text-sm sm:text-base ${
                       reportType === 'monthly'
                         ? 'text-blue-600 border-blue-600'
                         : 'text-gray-500 border-transparent hover:text-gray-700'
@@ -164,7 +175,7 @@ export default function ReportsPage() {
                   </button>
                   <button
                     onClick={() => setReportType('category')}
-                    className={`px-6 py-3 font-medium border-b-2 transition-colors ${
+                    className={`px-4 sm:px-6 py-3 font-medium border-b-2 transition-colors text-sm sm:text-base ${
                       reportType === 'category'
                         ? 'text-blue-600 border-blue-600'
                         : 'text-gray-500 border-transparent hover:text-gray-700'
@@ -174,7 +185,7 @@ export default function ReportsPage() {
                   </button>
                   <button
                     onClick={() => setReportType('subscription')}
-                    className={`px-6 py-3 font-medium border-b-2 transition-colors ${
+                    className={`px-4 sm:px-6 py-3 font-medium border-b-2 transition-colors text-sm sm:text-base ${
                       reportType === 'subscription'
                         ? 'text-blue-600 border-blue-600'
                         : 'text-gray-500 border-transparent hover:text-gray-700'
@@ -189,64 +200,64 @@ export default function ReportsPage() {
                 {reportType === 'monthly' && (
                   <div>
                     {/* Monthly Summary */}
-                    <div className="grid lg:grid-cols-4 gap-6 mb-8">
-                      <div className="p-4 bg-gray-50 rounded-lg">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-8">
+                      <div className="p-3 sm:p-4 bg-gray-50 rounded-lg">
                         <div className="flex items-center gap-2 mb-2">
-                          <DollarSign className="w-5 h-5 text-blue-600" />
-                          <p className="text-sm text-gray-600">月間支出合計</p>
+                          <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
+                          <p className="text-xs sm:text-sm text-gray-600">月間支出合計</p>
                         </div>
-                        <p className="text-2xl font-bold">¥{report.totalAmount.toLocaleString()}</p>
-                        <p className={`text-sm mt-1 ${monthChange > 0 ? 'text-red-500' : 'text-green-500'}`}>
+                        <p className="text-lg sm:text-2xl font-bold">¥{report.totalAmount.toLocaleString()}</p>
+                        <p className={`text-xs sm:text-sm mt-1 ${monthChange > 0 ? 'text-red-500' : 'text-green-500'}`}>
                           前月比 {monthChange > 0 ? '+' : ''}{monthChange.toFixed(1)}%
                         </p>
                       </div>
 
-                      <div className="p-4 bg-gray-50 rounded-lg">
+                      <div className="p-3 sm:p-4 bg-gray-50 rounded-lg">
                         <div className="flex items-center gap-2 mb-2">
-                          <FileText className="w-5 h-5 text-green-600" />
-                          <p className="text-sm text-gray-600">取引件数</p>
+                          <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
+                          <p className="text-xs sm:text-sm text-gray-600">取引件数</p>
                         </div>
-                        <p className="text-2xl font-bold">{report.transactionCount}件</p>
-                        <p className="text-sm text-gray-500 mt-1">
+                        <p className="text-lg sm:text-2xl font-bold">{report.transactionCount}件</p>
+                        <p className="text-xs sm:text-sm text-gray-500 mt-1">
                           平均 ¥{Math.round(report.totalAmount / report.transactionCount).toLocaleString()}
                         </p>
                       </div>
 
-                      <div className="p-4 bg-gray-50 rounded-lg">
+                      <div className="p-3 sm:p-4 bg-gray-50 rounded-lg">
                         <div className="flex items-center gap-2 mb-2">
-                          <Calendar className="w-5 h-5 text-purple-600" />
-                          <p className="text-sm text-gray-600">1日平均</p>
+                          <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600" />
+                          <p className="text-xs sm:text-sm text-gray-600">1日平均</p>
                         </div>
-                        <p className="text-2xl font-bold">¥{Math.round(report.averagePerDay).toLocaleString()}</p>
-                        <p className="text-sm text-gray-500 mt-1">日額支出</p>
+                        <p className="text-lg sm:text-2xl font-bold">¥{Math.round(report.averagePerDay).toLocaleString()}</p>
+                        <p className="text-xs sm:text-sm text-gray-500 mt-1">日額支出</p>
                       </div>
 
-                      <div className="p-4 bg-gray-50 rounded-lg">
+                      <div className="p-3 sm:p-4 bg-gray-50 rounded-lg">
                         <div className="flex items-center gap-2 mb-2">
-                          <PieChart className="w-5 h-5 text-amber-600" />
-                          <p className="text-sm text-gray-600">カテゴリ数</p>
+                          <PieChart className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600" />
+                          <p className="text-xs sm:text-sm text-gray-600">カテゴリ数</p>
                         </div>
-                        <p className="text-2xl font-bold">{report.categories.length}</p>
-                        <p className="text-sm text-gray-500 mt-1">支出カテゴリ</p>
+                        <p className="text-lg sm:text-2xl font-bold">{report.categories.length}</p>
+                        <p className="text-xs sm:text-sm text-gray-500 mt-1">支出カテゴリ</p>
                       </div>
                     </div>
 
                     {/* Top Expenses */}
                     <div className="mb-8">
-                      <h3 className="text-lg font-semibold mb-4">高額支出TOP5</h3>
+                      <h3 className="text-base sm:text-lg font-semibold mb-4">高額支出TOP5</h3>
                       <div className="space-y-3">
                         {report.topExpenses.map((expense, index) => (
-                          <div key={expense.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                            <div className="flex items-center gap-4">
-                              <span className="text-2xl font-bold text-gray-400">#{index + 1}</span>
-                              <div>
-                                <p className="font-medium">{expense.merchant}</p>
-                                <p className="text-sm text-gray-500">
-                                  {expense.item_name || expense.category} • {format(new Date(expense.transaction_date), 'M月d日', { locale: ja })}
+                          <div key={expense.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 bg-gray-50 rounded-lg gap-3">
+                            <div className="flex items-center gap-3 sm:gap-4">
+                              <span className="text-xl sm:text-2xl font-bold text-gray-400">#{index + 1}</span>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium truncate">{expense.merchant}</p>
+                                <p className="text-xs sm:text-sm text-gray-500">
+                                  {expense.item_name || expense.category} • {format(new Date(expense.emails?.received_at || expense.transaction_date), 'M月d日', { locale: ja })}
                                 </p>
                               </div>
                             </div>
-                            <p className="text-lg font-semibold">¥{expense.amount.toLocaleString()}</p>
+                            <p className="text-base sm:text-lg font-semibold ml-10 sm:ml-0">¥{expense.amount.toLocaleString()}</p>
                           </div>
                         ))}
                       </div>
@@ -279,31 +290,31 @@ export default function ReportsPage() {
 
                 {reportType === 'subscription' && (
                   <div>
-                    <h3 className="text-lg font-semibold mb-4">サブスクリプション管理</h3>
+                    <h3 className="text-base sm:text-lg font-semibold mb-4">サブスクリプション管理</h3>
 
                     {/* Subscription Summary */}
-                    <div className="grid lg:grid-cols-3 gap-6 mb-6">
-                      <div className="p-4 bg-blue-50 rounded-lg">
-                        <p className="text-sm text-blue-600 mb-1">月額合計</p>
-                        <p className="text-2xl font-bold text-blue-900">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-6 mb-6">
+                      <div className="p-3 sm:p-4 bg-blue-50 rounded-lg">
+                        <p className="text-xs sm:text-sm text-blue-600 mb-1">月額合計</p>
+                        <p className="text-xl sm:text-2xl font-bold text-blue-900">
                           ¥{subscriptions
                             .filter(s => s.status === 'active' && s.billing_cycle === 'monthly')
                             .reduce((sum, s) => sum + s.amount, 0)
                             .toLocaleString()}
                         </p>
                       </div>
-                      <div className="p-4 bg-green-50 rounded-lg">
-                        <p className="text-sm text-green-600 mb-1">年額換算</p>
-                        <p className="text-2xl font-bold text-green-900">
+                      <div className="p-3 sm:p-4 bg-green-50 rounded-lg">
+                        <p className="text-xs sm:text-sm text-green-600 mb-1">年額換算</p>
+                        <p className="text-xl sm:text-2xl font-bold text-green-900">
                           ¥{(subscriptions
                             .filter(s => s.status === 'active' && s.billing_cycle === 'monthly')
                             .reduce((sum, s) => sum + s.amount * 12, 0))
                             .toLocaleString()}
                         </p>
                       </div>
-                      <div className="p-4 bg-amber-50 rounded-lg">
-                        <p className="text-sm text-amber-600 mb-1">アクティブ数</p>
-                        <p className="text-2xl font-bold text-amber-900">
+                      <div className="p-3 sm:p-4 bg-amber-50 rounded-lg">
+                        <p className="text-xs sm:text-sm text-amber-600 mb-1">アクティブ数</p>
+                        <p className="text-xl sm:text-2xl font-bold text-amber-900">
                           {subscriptions.filter(s => s.status === 'active').length}件
                         </p>
                       </div>
@@ -312,10 +323,10 @@ export default function ReportsPage() {
                     {/* Subscription List */}
                     <div className="space-y-3">
                       {subscriptions.map((sub) => (
-                        <div key={sub.id} className="flex items-center justify-between p-4 border rounded-lg">
-                          <div>
+                        <div key={sub.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 border rounded-lg gap-3">
+                          <div className="flex-1">
                             <p className="font-medium">{sub.service_name}</p>
-                            <div className="flex items-center gap-3 mt-1">
+                            <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-1">
                               <span className={`text-xs px-2 py-1 rounded ${
                                 sub.status === 'active'
                                   ? 'bg-green-100 text-green-700'
@@ -328,7 +339,7 @@ export default function ReportsPage() {
                               </span>
                             </div>
                           </div>
-                          <div className="text-right">
+                          <div className="text-left sm:text-right">
                             <p className="font-semibold">¥{sub.amount.toLocaleString()}</p>
                             {sub.billing_cycle === 'monthly' && (
                               <p className="text-xs text-gray-500">年間 ¥{(sub.amount * 12).toLocaleString()}</p>
@@ -343,28 +354,28 @@ export default function ReportsPage() {
             </div>
 
             {/* Export Options */}
-            <div className="bg-white rounded-xl shadow p-6">
-              <h3 className="text-lg font-semibold mb-4">エクスポート設定</h3>
-              <div className="grid lg:grid-cols-3 gap-4">
-                <button className="flex items-center justify-center gap-3 p-4 border-2 border-dashed rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors">
-                  <Download className="w-5 h-5 text-gray-600" />
+            <div className="bg-white rounded-xl shadow p-4 sm:p-6">
+              <h3 className="text-base sm:text-lg font-semibold mb-4">エクスポート設定</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+                <button className="flex items-center gap-3 p-3 sm:p-4 border-2 border-dashed rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors">
+                  <Download className="w-5 h-5 text-gray-600 flex-shrink-0" />
                   <div className="text-left">
-                    <p className="font-medium">PDF形式</p>
-                    <p className="text-sm text-gray-500">印刷用フォーマット</p>
+                    <p className="font-medium text-sm sm:text-base">PDF形式</p>
+                    <p className="text-xs sm:text-sm text-gray-500">印刷用フォーマット</p>
                   </div>
                 </button>
-                <button onClick={exportCSV} className="flex items-center justify-center gap-3 p-4 border-2 border-dashed rounded-lg hover:border-green-500 hover:bg-green-50 transition-colors">
-                  <FileText className="w-5 h-5 text-gray-600" />
+                <button onClick={exportCSV} className="flex items-center gap-3 p-3 sm:p-4 border-2 border-dashed rounded-lg hover:border-green-500 hover:bg-green-50 transition-colors">
+                  <FileText className="w-5 h-5 text-gray-600 flex-shrink-0" />
                   <div className="text-left">
-                    <p className="font-medium">CSV形式</p>
-                    <p className="text-sm text-gray-500">表計算ソフト用</p>
+                    <p className="font-medium text-sm sm:text-base">CSV形式</p>
+                    <p className="text-xs sm:text-sm text-gray-500">表計算ソフト用</p>
                   </div>
                 </button>
-                <button className="flex items-center justify-center gap-3 p-4 border-2 border-dashed rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-colors">
-                  <Share2 className="w-5 h-5 text-gray-600" />
+                <button className="flex items-center gap-3 p-3 sm:p-4 border-2 border-dashed rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-colors">
+                  <Share2 className="w-5 h-5 text-gray-600 flex-shrink-0" />
                   <div className="text-left">
-                    <p className="font-medium">共有リンク</p>
-                    <p className="text-sm text-gray-500">URLで共有</p>
+                    <p className="font-medium text-sm sm:text-base">共有リンク</p>
+                    <p className="text-xs sm:text-sm text-gray-500">URLで共有</p>
                   </div>
                 </button>
               </div>

@@ -4,9 +4,11 @@ import { fetchEmails } from '@/app/lib/gmail'
 import { parseEmailContentImproved } from '@/app/lib/gmail-improved'
 import { parseEmail, detectSubscription } from '@/app/lib/parser'
 import { parseEmailV2, detectSubscriptionsV2 } from '@/app/lib/email-parser-v2'
+import { parseMails, type RawMail } from '@/app/lib/email/pipeline'
 
 export async function POST(request: Request) {
   try {
+    const isDev = process.env.NODE_ENV !== 'production' || process.env.SHOW_PARSE_CONFIDENCE === '1'
     // Get current user
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -92,16 +94,24 @@ export async function POST(request: Request) {
     const issuerQueries = userIssuers
       .map(ui => {
         const issuer = ui.card_issuers
-        if (issuer?.email_domain) {
-          return `from:${issuer.email_domain}`
+        if (!issuer) return null
+
+        const froms = issuer.include_from_domains && issuer.include_from_domains.length > 0
+          ? issuer.include_from_domains
+          : (issuer.email_domain ? [issuer.email_domain] : [])
+
+        if (froms.length > 0) {
+          const fromGroup = froms.map((d: string) => `from:${d}`).join(' OR ')
+          return froms.length > 1 ? `(${fromGroup})` : fromGroup
         }
+
         // Use keywords if no domain
         if (issuer?.email_keywords && issuer.email_keywords.length > 0) {
-          return issuer.email_keywords.map(k => `from:"${k}"`).join(' OR ')
+          return issuer.email_keywords.map((k: string) => `from:"${k}"`).join(' OR ')
         }
         return null
       })
-      .filter(Boolean)
+      .filter(Boolean) as string[]
 
     if (issuerQueries.length === 0) {
       return NextResponse.json({
@@ -111,6 +121,7 @@ export async function POST(request: Request) {
 
     // Only user-selected card issuers, NO default Amazon/Rakuten/Yahoo
     const emailQuery = `(${issuerQueries.join(' OR ')}) newer_than:90d`
+    console.log('[sync-emails] emailQuery:', emailQuery)
 
     // Fetch emails from Gmail
     const messages = await fetchEmails(
@@ -123,6 +134,7 @@ export async function POST(request: Request) {
 
     const transactions = []
     const processedEmails = []
+    const devParsedInfo: any[] = []
 
     // Process each email
     for (const message of messages) {
@@ -163,23 +175,68 @@ export async function POST(request: Request) {
           .single()
 
         if (!emailError && savedEmail) {
-          // Try new parser first, fallback to old parser
-          const { transactions: parsedTransactions, metadata } = parseEmailV2(
-            parsed.from,
-            parsed.subject,
-            parsed.bodyText,
-            parsed.bodyHtml,
-            parsed.date
-          )
+          // Multi-layer pipeline first
+          const rawMail: RawMail = {
+            id: parsed.id || '',
+            subject: parsed.subject || '',
+            text: parsed.bodyText,
+            html: parsed.bodyHtml,
+            internalDate: parsed.date ? parsed.date.getTime() : undefined as any
+          }
+          const pipelineTx = await parseMails([rawMail], { allowFuzzy: true })
 
-          let transactionsToSave = parsedTransactions
+          let transactionsToSave: any[] = pipelineTx.map(t => ({
+            merchant: t.merchant,
+            amount: t.amount,
+            itemName: undefined,
+            date: new Date(t.date),
+            category: 'その他',
+            isSubscription: t.prelimSubscription || false,
+            cardLast4: undefined,
+            cardBrand: undefined
+          }))
 
-          // If new parser didn't find anything, try old parser
-          if (parsedTransactions.length === 0) {
-            const oldTransaction = parseEmail(parsed.from, parsed.bodyText, parsed.bodyHtml)
-            if (oldTransaction) {
-              transactionsToSave = [oldTransaction]
+          let usedParser: 'pipeline' | 'v2' | 'legacy' | 'none' = 'none'
+          let confValues: number[] = []
+          if (pipelineTx.length > 0) {
+            usedParser = 'pipeline'
+            confValues = pipelineTx.map(t => t.confidence || 0)
+          }
+
+          // If pipeline found nothing, try unified parser
+          if (transactionsToSave.length === 0) {
+            const { transactions: parsedTransactions, metadata } = parseEmailV2(
+              parsed.from,
+              parsed.subject,
+              parsed.bodyText,
+              parsed.bodyHtml,
+              parsed.date
+            )
+            transactionsToSave = parsedTransactions
+
+            // If still nothing, try old parser
+            if (parsedTransactions.length === 0) {
+              const oldTransaction = parseEmail(parsed.from, parsed.bodyText, parsed.bodyHtml)
+              if (oldTransaction) {
+                transactionsToSave = [oldTransaction]
+                usedParser = 'legacy'
+              }
+            } else {
+              usedParser = 'v2'
+              if (typeof (metadata as any)?.confidence === 'number') {
+                confValues = [Number((metadata as any).confidence)]
+              }
             }
+          }
+
+          if (isDev) {
+            devParsedInfo.push({
+              from: parsed.from,
+              subject: parsed.subject,
+              parser: usedParser,
+              confidences: confValues,
+              txCount: transactionsToSave.length
+            })
           }
 
           // Save all found transactions
@@ -212,9 +269,7 @@ export async function POST(request: Request) {
             await supabase
               .from('emails')
               .update({
-                is_processed: true,
-                email_type: metadata.emailType,
-                confidence_score: metadata.confidence
+                is_processed: true
               })
               .eq('id', savedEmail.id)
           }
@@ -231,9 +286,16 @@ export async function POST(request: Request) {
         .order('transaction_date', { ascending: false })
 
       if (allTransactions) {
+        // Normalize DB rows to parser-friendly shape
+        const detectionTx = allTransactions.map((t: any) => ({
+          merchant: t.merchant,
+          amount: Number(t.amount),
+          date: t.transaction_date ? new Date(t.transaction_date) : new Date()
+        }))
+
         // Try new subscription detection first
-        const subscriptionsV2 = detectSubscriptionsV2(allTransactions)
-        const subscriptions = subscriptionsV2.size > 0 ? subscriptionsV2 : detectSubscription(allTransactions)
+        const subscriptionsV2 = detectSubscriptionsV2(detectionTx)
+        const subscriptions = subscriptionsV2.size > 0 ? subscriptionsV2 : detectSubscription(detectionTx)
 
         // Save detected subscriptions
         for (const [key, subscription] of subscriptions) {
@@ -284,7 +346,8 @@ export async function POST(request: Request) {
         processedEmails: processedEmails.length,
         transactions: transactions.length,
         samples: processedEmails.slice(0, 5) // 最初の5件のサンプルを返す
-      }
+      },
+      dev: isDev ? devParsedInfo.slice(0, 20) : undefined
     })
 
   } catch (error) {

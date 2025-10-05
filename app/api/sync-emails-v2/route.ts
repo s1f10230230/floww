@@ -4,6 +4,7 @@ import { ImprovedGmailClient, parseEmailContentImproved } from '@/app/lib/gmail-
 import { parseEmailV2, detectSubscriptionsV2 } from '@/app/lib/email-parser-v2'
 import { parseEmail, detectSubscription } from '@/app/lib/parser'
 import { extractCreditCardTransactions, registerCardFromTransaction } from '@/app/lib/credit-card-extractor'
+// Removed: classifyCategory - categories are now manually assigned only
 
 interface ProcessedEmailResult {
   totalFetched: number
@@ -12,6 +13,13 @@ interface ProcessedEmailResult {
   errors: string[]
   hasMore: boolean
   nextPageToken?: string
+}
+
+interface AggregatedFilters {
+  includeFromDomains: Set<string>
+  excludeFromDomains: Set<string>
+  includeSubjects: Set<string>
+  excludeSubjects: Set<string>
 }
 
 /**
@@ -67,8 +75,13 @@ export async function POST(request: Request) {
       }, { status: 401 })
     }
 
-    // Build email query + runtime filters
-    const { emailQuery, issuerFilters } = await buildEmailQueryWithFilters(supabase, user.id)
+    // Build email query + runtime filters + get user issuers
+    const { emailQuery, issuerFilters, userIssuers } = await buildEmailQueryWithFilters(supabase, user.id)
+    const relaxedQuery = stripSubjectFilters(emailQuery)
+    console.log('[sync-emails-v2] emailQuery:', emailQuery)
+    if (relaxedQuery !== emailQuery) {
+      console.log('[sync-emails-v2] relaxedQuery:', relaxedQuery)
+    }
 
     let messages: any[] = []
     let nextPageToken: string | null | undefined = null
@@ -83,15 +96,25 @@ export async function POST(request: Request) {
           .filter(Boolean)
 
         console.log(`Incremental sync: found ${messages.length} new messages`)
-      } catch (error) {
-        console.warn('Incremental sync failed, falling back to full sync:', error)
-        errors.push('Incremental sync failed, using full sync')
+      } catch (error: any) {
+        const code = error?.code || error?.response?.status
+        if (code === 404) {
+          console.warn('History out of range (404). Clearing last_sync_history_id and falling back to full sync.')
+          errors.push('History out of range. Performing full sync.')
+          await supabase
+            .from('profiles')
+            .update({ last_sync_history_id: null })
+            .eq('id', user.id)
+        } else {
+          console.warn('Incremental sync failed, falling back to full sync:', error)
+          errors.push('Incremental sync failed, using full sync')
+        }
       }
     }
 
     // Full sync with pagination
     if (messages.length === 0) {
-      const result = await gmailClient.fetchEmailsPaginated({
+      let result = await gmailClient.fetchEmailsPaginated({
         query: emailQuery,
         maxResults,
         pageToken,
@@ -101,6 +124,20 @@ export async function POST(request: Request) {
       messages = result.messages
       nextPageToken = result.nextPageToken
       console.log(`Fetched ${messages.length} emails (page token: ${pageToken || 'first page'})`)
+
+      // Fallback: if strict subject filters resulted in zero, try relaxed query
+      if (messages.length === 0 && relaxedQuery && relaxedQuery !== emailQuery) {
+        console.log('[sync-emails-v2] No results with strict query, trying relaxed query')
+        result = await gmailClient.fetchEmailsPaginated({
+          query: relaxedQuery,
+          maxResults,
+          pageToken,
+          batchSize: 10
+        })
+        messages = result.messages
+        nextPageToken = result.nextPageToken
+        console.log(`[sync-emails-v2] Fallback fetched ${messages.length} emails`)
+      }
     }
 
     // Get existing email IDs to avoid duplicates
@@ -119,7 +156,8 @@ export async function POST(request: Request) {
         supabase,
         user.id,
         errors,
-        issuerFilters
+        issuerFilters,
+        userIssuers
       )
 
       transactions.push(...batchResults.transactions)
@@ -211,7 +249,7 @@ async function buildEmailQuery(supabase: any, userId: string): Promise<string> {
 /**
  * Build email query with include/exclude and return aggregated runtime filters
  */
-async function buildEmailQueryWithFilters(supabase: any, userId: string): Promise<{ emailQuery: string, issuerFilters: AggregatedFilters }> {
+async function buildEmailQueryWithFilters(supabase: any, userId: string): Promise<{ emailQuery: string, issuerFilters: AggregatedFilters, userIssuers: any[] }> {
   const { data: userIssuers } = await supabase
     .from('user_card_issuers')
     .select('*, card_issuers(id, name, email_domain, email_keywords, include_from_domains, exclude_from_domains, include_subject_keywords, exclude_subject_keywords)')
@@ -225,7 +263,8 @@ async function buildEmailQueryWithFilters(supabase: any, userId: string): Promis
   if (!userIssuers || userIssuers.length === 0) {
     return {
       emailQuery: 'newer_than:90d subject:"カード利用のお知らせ"',
-      issuerFilters: { includeFromDomains, excludeFromDomains, includeSubjects: new Set<string>(['カード利用のお知らせ','速報版','ご請求']), excludeSubjects }
+      issuerFilters: { includeFromDomains, excludeFromDomains, includeSubjects: new Set<string>(['カード利用のお知らせ','速報版','ご請求']), excludeSubjects },
+      userIssuers: []
     }
   }
 
@@ -275,12 +314,26 @@ async function buildEmailQueryWithFilters(supabase: any, userId: string): Promis
   if (issuerQueries.length === 0) {
     return {
       emailQuery: 'newer_than:90d subject:"カード利用のお知らせ"',
-      issuerFilters: { includeFromDomains, excludeFromDomains, includeSubjects, excludeSubjects }
+      issuerFilters: { includeFromDomains, excludeFromDomains, includeSubjects, excludeSubjects },
+      userIssuers
     }
   }
 
   const emailQuery = `(${issuerQueries.map(q => `(${q})`).join(' OR ')}) newer_than:90d`
-  return { emailQuery, issuerFilters: { includeFromDomains, excludeFromDomains, includeSubjects, excludeSubjects } }
+  return { emailQuery, issuerFilters: { includeFromDomains, excludeFromDomains, includeSubjects, excludeSubjects }, userIssuers }
+}
+
+function stripSubjectFilters(q: string): string {
+  try {
+    return q
+      .replace(/\s*-subject:\"[^\"]*\"/g, '')
+      .replace(/\s*subject:\"[^\"]*\"/g, '')
+      .replace(/\(\s*\)/g, '')
+      .replace(/\s{2,}/g, ' ')
+      .trim()
+  } catch {
+    return q
+  }
 }
 
 /**
@@ -342,10 +395,46 @@ async function processBatchEmails(
   supabase: any,
   userId: string,
   errors: string[],
-  issuerFilters: AggregatedFilters
+  issuerFilters: AggregatedFilters,
+  userIssuers: any[]
 ): Promise<{ transactions: any[], processedEmails: any[] }> {
   const transactions: any[] = []
   const processedEmails: any[] = []
+
+  // Helper function to determine issuer_id from email sender
+  const getIssuerId = (emailFrom: string): string | null => {
+    const fromLower = emailFrom.toLowerCase()
+    for (const ui of userIssuers) {
+      const issuer = ui.card_issuers
+      if (!issuer) continue
+
+      // Check include_from_domains
+      if (issuer.include_from_domains && issuer.include_from_domains.length > 0) {
+        for (const domain of issuer.include_from_domains) {
+          if (fromLower.includes(domain.toLowerCase())) {
+            return issuer.id
+          }
+        }
+      }
+
+      // Check email_domain (fallback)
+      if (issuer.email_domain && fromLower.includes(issuer.email_domain.toLowerCase())) {
+        return issuer.id
+      }
+    }
+    return null
+  }
+
+  // Load merchant category mappings for this user
+  const { data: merchantMappings } = await supabase
+    .from('merchant_category_mappings')
+    .select('merchant_name, category')
+    .eq('user_id', userId)
+
+  const merchantCategoryMap = new Map<string, string>()
+  merchantMappings?.forEach((m: any) => {
+    merchantCategoryMap.set(m.merchant_name, m.category)
+  })
 
   for (const message of messages) {
     try {
@@ -435,6 +524,12 @@ async function processBatchEmails(
 
       // Save transactions
       for (const transaction of transactionsToSave) {
+        // Determine category: only use user mapping (manual assignment)
+        const category = merchantCategoryMap.get(transaction.merchant) || null
+
+        // Determine issuer_id from email sender
+        const issuerId = getIssuerId(parsed.from || '')
+
         const { data: savedTransaction, error: txError } = await supabase
           .from('transactions')
           .insert({
@@ -443,12 +538,13 @@ async function processBatchEmails(
             merchant: transaction.merchant,
             amount: transaction.amount,
             currency: 'JPY',
-            category: transaction.category,
+            category,
             item_name: transaction.itemName,
-            transaction_date: transaction.date,
+            transaction_date: transaction.date || parsed.date,  // Use transaction date if available, fallback to email received date
             is_subscription: transaction.isSubscription || false,
             card_last4: transaction.cardLast4,
-            card_brand: transaction.cardBrand
+            card_brand: transaction.cardBrand,
+            issuer_id: issuerId
           })
           .select()
           .single()
@@ -493,8 +589,15 @@ async function detectAndSaveSubscriptions(supabase: any, userId: string): Promis
 
   if (!allTransactions) return
 
-  const subscriptionsV2 = detectSubscriptionsV2(allTransactions)
-  const subscriptions = subscriptionsV2.size > 0 ? subscriptionsV2 : detectSubscription(allTransactions)
+  // Normalize DB rows to parser-friendly shape with Date objects
+  const detectionTx = allTransactions.map((t: any) => ({
+    merchant: t.merchant,
+    amount: Number(t.amount),
+    date: t.transaction_date ? new Date(t.transaction_date) : new Date()
+  }))
+
+  const subscriptionsV2 = detectSubscriptionsV2(detectionTx)
+  const subscriptions = subscriptionsV2.size > 0 ? subscriptionsV2 : detectSubscription(detectionTx)
 
   for (const [key, subscription] of subscriptions) {
     const { data: existing } = await supabase
@@ -517,6 +620,7 @@ async function detectAndSaveSubscriptions(supabase: any, userId: string): Promis
           last_detected_date: subscription.lastDetected,
           first_detected_date: subscription.firstDetected,
           transaction_count: subscription.transactionCount,
+          category: subscription.category,
           status: 'active'
         })
     } else {
@@ -525,9 +629,92 @@ async function detectAndSaveSubscriptions(supabase: any, userId: string): Promis
         .update({
           last_detected_date: subscription.lastDetected,
           transaction_count: subscription.transactionCount,
+          category: subscription.category,
           updated_at: new Date().toISOString()
         })
         .eq('id', existing.id)
     }
   }
 }
+
+/**
+ * Build email query with filters from user's card issuers
+ */
+// DUPLICATE BLOCK START
+async function buildEmailQueryWithFilters_DUP(supabase: any, userId: string): Promise<{ emailQuery: string, issuerFilters: AggregatedFilters }> {
+  // Get user's registered card issuers
+  const { data: userIssuers } = await supabase
+    .from('user_card_issuers')
+    .select('*, card_issuers(id, name, email_domain, email_keywords, include_from_domains, exclude_from_domains, include_subject_keywords, exclude_subject_keywords)')
+    .eq('user_id', userId)
+
+  if (!userIssuers || userIssuers.length === 0) {
+    throw new Error('カード会社が登録されていません')
+  }
+
+  // Build aggregated filters
+  const includeFromDomains = new Set<string>()
+  const excludeFromDomains = new Set<string>()
+  const includeSubjects = new Set<string>()
+  const excludeSubjects = new Set<string>(['キャンペーン', 'アンケート', '通信', 'ニュース', 'ポイント進呈', 'プレゼント', '抽選', '特別価格', 'クーポン', 'エントリー', 'Spot Mail'])
+
+  userIssuers.forEach((ui: any) => {
+    const issuer = ui.card_issuers
+    if (!issuer) return
+    ;(issuer.include_from_domains || []).forEach((d: string) => includeFromDomains.add(String(d).toLowerCase()))
+    ;(issuer.exclude_from_domains || []).forEach((d: string) => excludeFromDomains.add(String(d).toLowerCase()))
+    ;(issuer.include_subject_keywords || []).forEach((k: string) => includeSubjects.add(String(k)))
+    ;(issuer.exclude_subject_keywords || []).forEach((k: string) => excludeSubjects.add(String(k)))
+  })
+
+  const issuerFilters: AggregatedFilters = { includeFromDomains, excludeFromDomains, includeSubjects, excludeSubjects }
+
+  // Build Gmail query
+  const issuerQueries = userIssuers
+    .map((ui: any) => {
+      const issuer = ui.card_issuers
+      if (!issuer) return null
+
+      const froms = issuer.include_from_domains && issuer.include_from_domains.length > 0
+        ? issuer.include_from_domains
+        : (issuer.email_domain ? [issuer.email_domain] : [])
+
+      if (froms.length > 0) {
+        const fromGroup = froms.map((d: string) => `from:${d}`).join(' OR ')
+        return froms.length > 1 ? `(${fromGroup})` : fromGroup
+      }
+
+      // Use keywords if no domain
+      if (issuer?.email_keywords && issuer.email_keywords.length > 0) {
+        return issuer.email_keywords.map((k: string) => `from:"${k}"`).join(' OR ')
+      }
+      return null
+    })
+    .filter(Boolean) as string[]
+
+  if (issuerQueries.length === 0) {
+    throw new Error('カード会社が正しく設定されていません')
+  }
+
+  // Build strict query with subject filters
+  let emailQuery = `(${issuerQueries.join(' OR ')}) newer_than:90d`
+
+  // Add subject filters if any
+  if (issuerFilters.includeSubjects.size > 0) {
+    const subjectFilters = Array.from(issuerFilters.includeSubjects)
+      .map(s => `subject:"${s}"`)
+      .join(' OR ')
+    emailQuery += ` (${subjectFilters})`
+  }
+
+  return { emailQuery, issuerFilters }
+}
+
+/**
+ * Remove subject filters from query for fallback
+ */
+function stripSubjectFilters_DUP(query: string): string {
+  // Remove subject: clauses
+  return query.replace(/\s*\(subject:[^)]+\)/g, '').trim()
+}
+

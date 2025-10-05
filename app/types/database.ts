@@ -6,6 +6,8 @@ export interface Profile {
   gmail_refresh_token?: string
   gmail_access_token?: string
   gmail_token_expiry?: string
+  plan_id?: string
+  plan_expires_at?: string
   created_at: string
   updated_at: string
 }
@@ -38,7 +40,15 @@ export interface Transaction {
   card_last4?: string
   card_brand?: string
   payment_method?: string
+  issuer_id?: string
   created_at: string
+  emails?: {
+    received_at: string
+  }
+  card_issuers?: {
+    name: string
+  }
+  card_issuer_name?: string
 }
 
 export interface CreditCard {
@@ -49,6 +59,8 @@ export interface CreditCard {
   card_name?: string
   color?: string
   is_active: boolean
+  issuer_id?: string
+  nickname?: string
   created_at: string
   updated_at: string
 }
@@ -65,6 +77,7 @@ export interface Subscription {
   status: 'active' | 'cancelled' | 'paused'
   first_detected_date?: string
   transaction_count: number
+  category?: string
   created_at: string
   updated_at: string
 }
@@ -75,4 +88,45 @@ export interface Category {
   icon?: string
   color?: string
   created_at: string
+}
+
+export interface SubscriptionPlan {
+  id: string
+  name: string
+  price: number
+  max_cards: number
+  max_emails_per_sync: number
+  features?: Record<string, boolean | string>
+  is_active: boolean
+  created_at: string
+}
+
+export interface CardIssuer {
+  id: string
+  name: string
+  email_domain?: string
+  email_keywords?: string[]
+  include_from_domains?: string[]
+  exclude_from_domains?: string[]
+  include_subject_keywords?: string[]
+  exclude_subject_keywords?: string[]
+  logo_url?: string
+  is_active: boolean
+  created_at: string
+}
+
+export interface UserCardIssuer {
+  id: string
+  user_id: string
+  issuer_id: string
+  created_at: string
+}
+
+export interface MerchantCategoryMapping {
+  id: string
+  user_id: string
+  merchant_name: string
+  category: string
+  created_at: string
+  updated_at: string
 }

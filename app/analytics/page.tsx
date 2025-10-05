@@ -70,10 +70,10 @@ export default function AnalyticsPage() {
       startDate = subMonths(endDate, 12)
     }
 
-    // Load transactions
+    // Load transactions with email received_at
     const { data: transactionsData } = await supabase
       .from('transactions')
-      .select('*')
+      .select('*, emails(received_at)')
       .eq('user_id', user.id)
       .gte('transaction_date', startDate.toISOString())
       .order('transaction_date', { ascending: true })
@@ -87,7 +87,8 @@ export default function AnalyticsPage() {
     const monthlyData: { [key: string]: number } = {}
 
     transactions.forEach(t => {
-      const month = format(new Date(t.transaction_date), 'yyyy-MM')
+      const displayDate = (t as any).emails?.received_at || t.transaction_date
+      const month = format(new Date(displayDate), 'yyyy-MM')
       monthlyData[month] = (monthlyData[month] || 0) + t.amount
     })
 
@@ -120,7 +121,8 @@ export default function AnalyticsPage() {
     const dayData: { [key: number]: { count: number; amount: number } } = {}
 
     transactions.forEach(t => {
-      const day = new Date(t.transaction_date).getDay()
+      const displayDate = (t as any).emails?.received_at || t.transaction_date
+      const day = new Date(displayDate).getDay()
       if (!dayData[day]) {
         dayData[day] = { count: 0, amount: 0 }
       }
