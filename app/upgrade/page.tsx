@@ -251,7 +251,7 @@ export default function UpgradePage() {
         )}
 
         {/* Plans Grid */}
-        <div className="grid lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid lg:grid-cols-3 gap-6 mb-8 max-w-5xl mx-auto">
           {plans.map((plan) => {
             const isCurrentPlan = currentPlan?.name === plan.name
             const savings = getSavings(plan)
