@@ -9,12 +9,8 @@ const stripe = process.env.STRIPE_SECRET_KEY
   : null
 
 const PRICE_IDS = {
-  basic_monthly: process.env.STRIPE_PRICE_BASIC_MONTHLY!,
-  basic_yearly: process.env.STRIPE_PRICE_BASIC_YEARLY!,
-  pro_monthly: process.env.STRIPE_PRICE_PRO_MONTHLY!,
-  pro_yearly: process.env.STRIPE_PRICE_PRO_YEARLY!,
-  business_monthly: process.env.STRIPE_PRICE_BUSINESS_MONTHLY!,
-  business_yearly: process.env.STRIPE_PRICE_BUSINESS_YEARLY!,
+  standard_monthly: 'price_1SFCPfKIxqjNFDJvsVfmnY49',
+  premium_monthly: 'price_1SFCQHKIxqjNFDJvGazsc0dG',
 }
 
 export async function POST(request: Request) {
