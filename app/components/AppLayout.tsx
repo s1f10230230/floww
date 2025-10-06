@@ -193,7 +193,7 @@ export default function AppLayout({ children, user }: AppLayoutProps) {
         <footer className="bg-white border-t border-gray-200 flex-shrink-0">
           <div className="px-6 py-4">
             <div className="flex flex-col sm:flex-row justify-between items-center gap-2 text-xs text-gray-600">
-              <span>© 2024 Floww</span>
+              <span>© 2025 Floww</span>
               <div className="flex gap-4">
                 <a href="/privacy" className="hover:text-gray-900 transition-colors">
                   プライバシーポリシー

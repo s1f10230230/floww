@@ -181,7 +181,7 @@ export default function CardsPage() {
     } else {
       // Check limit
       if (userPlan && userIssuers.length >= userPlan.max_cards) {
-        toast.error(`${userPlan.name}プランでは最大${userPlan.max_cards}社まで登録できます`)
+        toast.error(`${userPlan.name}プランでは最大${userPlan.max_cards}社まで登録できます。プランをアップグレードしてください。`)
         return
       }
 
