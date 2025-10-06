@@ -10,7 +10,9 @@ const stripe = process.env.STRIPE_SECRET_KEY
 
 const PRICE_IDS = {
   standard_monthly: 'price_1SFCPfKIxqjNFDJvsVfmnY49',
+  standard_yearly: 'price_1SFCpIKIxqjNFDJv1XVu8sIv',
   premium_monthly: 'price_1SFCQHKIxqjNFDJvGazsc0dG',
+  premium_yearly: 'price_1SFCpnKIxqjNFDJvH8E5oma4',
 }
 
 export async function POST(request: Request) {
