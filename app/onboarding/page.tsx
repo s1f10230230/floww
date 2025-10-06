@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/app/lib/supabase-client'
+import toast, { Toaster } from 'react-hot-toast'
 import { CreditCard, Check, ChevronRight, AlertCircle } from 'lucide-react'
 
 const CARD_ISSUERS = [
@@ -66,7 +67,7 @@ export default function Onboarding() {
 
       // Check plan limit
       if (userPlan && prev.length >= userPlan.max_cards) {
-        alert(`${userPlan.name}プランでは最大${userPlan.max_cards}枚のカードまで登録できます。`)
+        toast.error(`${userPlan.name}プランでは最大${userPlan.max_cards}枚のカードまで登録できます。`)
         return prev
       }
 
@@ -76,7 +77,7 @@ export default function Onboarding() {
 
   const handleComplete = async () => {
     if (selectedIssuers.length === 0) {
-      alert(`カード会社を選択してください（${userPlan?.name || 'Free'}プラン: 最大${userPlan?.max_cards || 2}社）`)
+      toast.error(`カード会社を選択してください（${userPlan?.name || 'Free'}プラン: 最大${userPlan?.max_cards || 2}社）`)
       return
     }
 
@@ -174,10 +175,11 @@ export default function Onboarding() {
           .eq('id', user.id)
       }
 
+      toast.success('設定を保存しました！')
       router.push('/dashboard')
     } catch (error) {
       console.error('Error saving card issuers:', error)
-      alert('保存中にエラーが発生しました')
+      toast.error('保存中にエラーが発生しました')
     } finally {
       setLoading(false)
     }
@@ -185,6 +187,7 @@ export default function Onboarding() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12">
+      <Toaster position="top-right" />
       <div className="container mx-auto max-w-4xl px-4">
         {/* Gmail Connection Status */}
         {gmailConnected && (

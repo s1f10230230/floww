@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/app/lib/supabase-client'
 import AppLayout from '@/app/components/AppLayout'
+import toast, { Toaster } from 'react-hot-toast'
 import {
   Check,
   X,
@@ -171,13 +172,14 @@ export default function UpgradePage() {
       const { url, error } = await response.json()
 
       if (error) {
-        alert(`エラー: ${error}`)
+        toast.error(`エラー: ${error}`)
       } else if (url) {
+        toast.success('Stripe Checkoutに移動します...')
         // Redirect to Stripe Checkout
         window.location.href = url
       }
     } catch (error: any) {
-      alert(`エラーが発生しました: ${error.message}`)
+      toast.error(`エラーが発生しました: ${error.message}`)
     } finally {
       setLoading(false)
     }
@@ -198,6 +200,7 @@ export default function UpgradePage() {
 
   return (
     <AppLayout user={user}>
+      <Toaster position="top-right" />
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-3">プランをアップグレード</h1>
