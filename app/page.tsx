@@ -106,6 +106,13 @@ export default function Home() {
             <p className="text-xs sm:text-sm text-gray-500">
               ※カード利用通知メールを取得して自動で家計簿を作成します
             </p>
+            <p className="text-xs text-gray-500 mt-2">
+              ログインすることで、
+              <a href="/terms" className="text-blue-600 hover:underline mx-1">利用規約</a>
+              および
+              <a href="/privacy" className="text-blue-600 hover:underline mx-1">プライバシーポリシー</a>
+              に同意したものとみなされます
+            </p>
           </div>
 
           {/* Features */}
