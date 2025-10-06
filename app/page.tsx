@@ -6,12 +6,10 @@ import { useRouter } from 'next/navigation'
 import { FlowwWordmark, FlowwIcon } from './components/FlowwLogo'
 
 export default function Home() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
-    
     checkAuth()
   }, [])
 
@@ -20,7 +18,6 @@ export default function Home() {
     const { data: { session } } = await supabase.auth.getSession()
 
     if (session) {
-      setIsAuthenticated(true)
       router.push('/dashboard')
     }
   }
@@ -194,18 +191,6 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Dashboard Preview (shown when authenticated) */}
-      {isAuthenticated && (
-        <div className="container mx-auto px-4 py-16">
-          <div className="max-w-6xl mx-auto">
-            <div className="bg-white rounded-xl shadow-xl p-8">
-              <h2 className="text-2xl font-bold mb-6">今月の支出</h2>
-              {/* TODO: Add expense list and charts */}
-              <p className="text-gray-500">支出データを取得中...</p>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Footer */}
       <footer className="bg-white border-t border-gray-200 mt-16">

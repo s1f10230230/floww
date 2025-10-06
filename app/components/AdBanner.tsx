@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react'
 import Link from 'next/link'
-import { X, Crown } from 'lucide-react'
+import { X, Crown, RefreshCw } from 'lucide-react'
 
 interface AdBannerProps {
   userPlan?: any
@@ -12,27 +12,13 @@ interface AdBannerProps {
 }
 
 export default function AdBanner({ userPlan, slot, format = 'horizontal', className = '' }: AdBannerProps) {
-  // Don't show ads for paid plans
+  // Temporarily hide ads - show subscription detection feature instead
+  const showAds = false
+
+  // Don't show anything for paid plans
   if (userPlan && userPlan.name !== 'Free') {
     return null
   }
-
-  useEffect(() => {
-    // Load AdSense ads
-    try {
-      if (typeof window !== 'undefined' && (window as any).adsbygoogle && slot) {
-        const adElements = document.querySelectorAll('.adsbygoogle')
-        const lastAd = adElements[adElements.length - 1]
-
-        // Only push if this ad hasn't been loaded yet
-        if (lastAd && !lastAd.getAttribute('data-adsbygoogle-status')) {
-          ;((window as any).adsbygoogle = (window as any).adsbygoogle || []).push({})
-        }
-      }
-    } catch (error) {
-      console.error('AdSense error:', error)
-    }
-  }, [slot])
 
   const dimensions = {
     horizontal: { width: '100%', height: '90px' },
@@ -40,45 +26,28 @@ export default function AdBanner({ userPlan, slot, format = 'horizontal', classN
     square: { width: '300px', height: '250px' }
   }
 
+  // Show subscription detection feature instead of ads
   return (
-    <div className={`relative bg-gray-50 rounded-lg border border-gray-200 overflow-hidden ${className}`}>
-      {/* Upgrade prompt */}
-      <div className="absolute top-2 right-2 z-10">
-        <Link
-          href="/upgrade"
-          className="flex items-center gap-1 px-3 py-1 bg-blue-500 text-white text-xs font-medium rounded-full hover:bg-blue-600 transition-colors shadow-sm"
-        >
-          <Crown className="w-3 h-3" />
-          広告を非表示
-        </Link>
-      </div>
-
-      {/* AdSense Ad */}
+    <div className={`relative bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200 overflow-hidden ${className}`}>
       <div className="flex items-center justify-center p-4" style={dimensions[format]}>
-        {slot ? (
-          <ins
-            className="adsbygoogle"
-            style={{ display: 'block', width: '100%', height: '100%' }}
-            data-ad-client="ca-pub-6475316584558352"
-            data-ad-slot={slot}
-            data-ad-format="auto"
-            data-full-width-responsive="true"
-          />
-        ) : (
-          // Fallback promotional banner
-          <div className="text-center">
-            <p className="text-sm text-gray-600 mb-2">
-              広告を非表示にして、さらに多くの機能を利用しませんか？
+        <div className="text-center">
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <RefreshCw className="w-5 h-5 text-blue-600" />
+            <p className="text-sm font-semibold text-gray-900">
+              継続支払いを自動検出
             </p>
-            <Link
-              href="/upgrade"
-              className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm font-medium rounded-lg hover:from-blue-600 hover:to-blue-700 transition-colors"
-            >
-              <Crown className="w-4 h-4" />
-              Standardプランにアップグレード
-            </Link>
           </div>
-        )}
+          <p className="text-xs text-gray-600 mb-2">
+            サブスク、定期購入を見逃さず管理
+          </p>
+          <Link
+            href="/upgrade"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs font-medium rounded-lg hover:from-blue-600 hover:to-blue-700 transition-colors"
+          >
+            <Crown className="w-3 h-3" />
+            無制限検出にアップグレード
+          </Link>
+        </div>
       </div>
     </div>
   )
