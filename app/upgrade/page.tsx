@@ -37,10 +37,10 @@ export default function UpgradePage() {
       color: 'gray',
       features: [
         { name: '最大2枚のカード登録', included: true },
-        { name: 'メール自動同期', included: true },
+        { name: 'メール自動同期（1日1回）', included: true },
         { name: '基本的な支出分析', included: true },
-        { name: 'サブスク検出', included: true },
-        { name: 'データ保持3ヶ月のみ', included: false },
+        { name: 'サブスク検出（3件まで）', included: true },
+        { name: 'データ保持3ヶ月', included: true },
         { name: '広告表示あり', included: false },
         { name: 'CSVエクスポート', included: false },
         { name: 'APIアクセス', included: false }
@@ -62,9 +62,9 @@ export default function UpgradePage() {
       popular: true,
       features: [
         { name: '最大5枚のカード登録', included: true },
-        { name: 'メール自動同期', included: true },
+        { name: 'メール自動同期（6時間ごと）', included: true },
         { name: '詳細な支出分析', included: true },
-        { name: '月次レポート', included: true },
+        { name: 'サブスク検出（無制限）', included: true },
         { name: 'データ無制限保持', included: true },
         { name: '広告なし', included: true },
         { name: 'CSVエクスポート', included: true },
@@ -86,9 +86,9 @@ export default function UpgradePage() {
       color: 'purple',
       features: [
         { name: '最大10枚のカード登録', included: true },
-        { name: 'リアルタイムメール同期', included: true },
+        { name: 'メール自動同期（リアルタイム）', included: true },
         { name: '高度な支出分析', included: true },
-        { name: '月次レポート', included: true },
+        { name: 'サブスク検出（無制限）', included: true },
         { name: 'データ無制限保持', included: true },
         { name: '広告なし', included: true },
         { name: 'CSVエクスポート', included: true },

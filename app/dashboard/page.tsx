@@ -47,8 +47,28 @@ export default function Dashboard() {
   const [selectedEmailId, setSelectedEmailId] = useState<string | null>(null)
   const [emailDetails, setEmailDetails] = useState<any>(null)
 
+  // Filter transactions based on plan data retention
+  const getFilteredTransactions = () => {
+    const now = new Date()
+    const threeMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate())
+
+    return transactions.filter(t => {
+      const displayDate = t.emails?.received_at || t.transaction_date
+      const transactionDate = new Date(displayDate)
+
+      // Free plan: only show last 3 months
+      if (userPlan?.name === 'Free' && transactionDate < threeMonthsAgo) {
+        return false
+      }
+
+      return true
+    })
+  }
+
+  const filteredTransactions = getFilteredTransactions()
+
   // Calculate monthly total
-  const monthlyTotal = transactions
+  const monthlyTotal = filteredTransactions
     .filter(t => {
       const displayDate = t.emails?.received_at || t.transaction_date
       const transactionDate = new Date(displayDate)
@@ -57,12 +77,42 @@ export default function Dashboard() {
     })
     .reduce((sum, t) => sum + t.amount, 0)
 
+  // Filter subscriptions based on plan limit
+  const getFilteredSubscriptions = () => {
+    const activeSubscriptions = subscriptions.filter(s => s.status === 'active')
+
+    // Free plan: limit to 3 subscriptions
+    if (userPlan?.name === 'Free') {
+      return activeSubscriptions.slice(0, 3)
+    }
+
+    return activeSubscriptions
+  }
+
+  const filteredSubscriptions = getFilteredSubscriptions()
+
   // Calculate subscription total
-  const subscriptionTotal = subscriptions
-    .filter(s => s.status === 'active')
+  const subscriptionTotal = filteredSubscriptions
     .reduce((sum, s) => sum + s.amount, 0)
 
   const syncEmails = async (opts?: { useNextPage?: boolean }) => {
+    // Check sync frequency limit
+    if (lastSyncAt && userPlan) {
+      const now = new Date()
+      const timeSinceLastSync = now.getTime() - lastSyncAt.getTime()
+      const minutesSinceLastSync = timeSinceLastSync / (1000 * 60)
+
+      let minInterval = 0
+      if (userPlan.name === 'Free') minInterval = 24 * 60 // 1 day
+      else if (userPlan.name === 'Standard') minInterval = 6 * 60 // 6 hours
+
+      if (minInterval > 0 && minutesSinceLastSync < minInterval) {
+        const hoursLeft = Math.ceil((minInterval - minutesSinceLastSync) / 60)
+        toast.error(`${userPlan.name}プランは${minInterval / 60}時間ごとに同期できます。あと${hoursLeft}時間後に同期可能です。`)
+        return
+      }
+    }
+
     setSyncing(true)
     try {
       const endpoint = process.env.NEXT_PUBLIC_USE_SYNC_V2 === 'true' ? '/api/sync-emails-v2' : '/api/sync-emails'
@@ -446,7 +496,7 @@ export default function Dashboard() {
               <p className="text-xs sm:text-sm lg:text-base text-gray-600">取引件数</p>
               <Package className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
             </div>
-            <p className="text-lg sm:text-2xl lg:text-3xl font-bold">{transactions.filter(t => {
+            <p className="text-lg sm:text-2xl lg:text-3xl font-bold">{filteredTransactions.filter(t => {
               const displayDate = t.emails?.received_at || t.transaction_date
               const transactionDate = new Date(displayDate)
               return transactionDate >= startOfMonth(selectedMonth) &&
@@ -460,20 +510,20 @@ export default function Dashboard() {
               <p className="text-xs sm:text-sm lg:text-base text-gray-600">継続支払</p>
               <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
             </div>
-            <p className="text-lg sm:text-2xl lg:text-3xl font-bold text-amber-500">{subscriptions.length}</p>
+            <p className="text-lg sm:text-2xl lg:text-3xl font-bold text-amber-500">{filteredSubscriptions.length}</p>
             <p className="text-xs sm:text-sm text-gray-500 mt-1">アクティブ</p>
           </div>
         </div>
 
         {/* Category and Card Breakdown */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 mb-8">
-          <CategoryBreakdown transactions={transactions.filter(t => {
+          <CategoryBreakdown transactions={filteredTransactions.filter(t => {
             const displayDate = t.emails?.received_at || t.transaction_date
             const transactionDate = new Date(displayDate)
             return transactionDate >= startOfMonth(selectedMonth) &&
                    transactionDate <= endOfMonth(selectedMonth)
           })} />
-          <CardBreakdown transactions={transactions.filter(t => {
+          <CardBreakdown transactions={filteredTransactions.filter(t => {
             const displayDate = t.emails?.received_at || t.transaction_date
             const transactionDate = new Date(displayDate)
             return transactionDate >= startOfMonth(selectedMonth) &&
@@ -489,9 +539,36 @@ export default function Dashboard() {
               <div className="p-6 border-b">
                 <div className="flex justify-between items-center">
                   <h2 className="text-xl font-semibold">最近の取引</h2>
-                  <button className="text-blue-500 hover:text-blue-600">
-                    <Filter className="w-5 h-5" />
-                  </button>
+                  <div className="flex gap-2">
+                    {userPlan && userPlan.name !== 'Free' && (
+                      <button
+                        onClick={() => {
+                          const csv = [
+                            ['日付', '利用先', '商品名', 'カテゴリ', '金額'].join(','),
+                            ...filteredTransactions.map(t => [
+                              format(new Date(t.emails?.received_at || t.transaction_date), 'yyyy-MM-dd'),
+                              t.merchant,
+                              t.item_name || '',
+                              t.category || '',
+                              t.amount
+                            ].join(','))
+                          ].join('\n')
+                          const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
+                          const link = document.createElement('a')
+                          link.href = URL.createObjectURL(blob)
+                          link.download = `transactions_${format(new Date(), 'yyyyMMdd')}.csv`
+                          link.click()
+                        }}
+                        className="flex items-center gap-1 px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                      >
+                        <Download className="w-4 h-4" />
+                        <span className="hidden sm:inline">CSV</span>
+                      </button>
+                    )}
+                    <button className="text-blue-500 hover:text-blue-600">
+                      <Filter className="w-5 h-5" />
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -557,7 +634,7 @@ export default function Dashboard() {
                     </div>
                   </div>
                 ) : (
-                  transactions
+                  filteredTransactions
                     .filter(t => {
                       const displayDate = t.emails?.received_at || t.transaction_date
                       const transactionDate = new Date(displayDate)
@@ -620,12 +697,13 @@ export default function Dashboard() {
               </div>
 
               <div className="divide-y">
-                {subscriptions.length === 0 ? (
+                {filteredSubscriptions.length === 0 ? (
                   <div className="p-8 text-center text-gray-500">
                     継続的な支払いが検出されていません
                   </div>
                 ) : (
-                  subscriptions.map((subscription) => (
+                  <>
+                    {filteredSubscriptions.map((subscription) => (
                     <div key={subscription.id} className="p-4">
                       <div className="flex justify-between items-start mb-2">
                         <div>
@@ -664,11 +742,22 @@ export default function Dashboard() {
                         </span>
                       </div>
                     </div>
-                  ))
+                    ))}
+                    {userPlan?.name === 'Free' && subscriptions.filter(s => s.status === 'active').length > 3 && (
+                      <div className="p-4 bg-blue-50 text-center">
+                        <p className="text-sm text-blue-900">
+                          Freeプランでは3件まで表示されます。すべて表示するには
+                          <button onClick={() => router.push('/upgrade')} className="text-blue-600 font-medium hover:underline ml-1">
+                            アップグレード
+                          </button>
+                        </p>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
 
-              {subscriptions.length > 0 && (
+              {filteredSubscriptions.length > 0 && (
                 <div className="p-4 border-t bg-yellow-50">
                   <div className="flex items-start gap-2">
                     <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
