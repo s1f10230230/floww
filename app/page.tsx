@@ -58,11 +58,14 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 relative overflow-hidden">
-      {/* Background decorative elements */}
+    <div className="min-h-screen bg-white relative overflow-hidden">
+      {/* Mesh gradient background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-400/10 rounded-full blur-3xl"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-purple-400/10 rounded-full blur-3xl"></div>
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-100/60 via-purple-100/50 to-pink-100/60"></div>
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-300/40 rounded-full blur-3xl"></div>
+        <div className="absolute top-1/3 right-1/4 w-80 h-80 bg-purple-300/40 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-0 left-1/3 w-96 h-96 bg-pink-300/40 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-1/4 right-1/3 w-72 h-72 bg-indigo-300/40 rounded-full blur-3xl"></div>
       </div>
 
       {/* JSON-LD for SEO */}
@@ -210,7 +213,7 @@ export default function Home() {
           <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
             <div className="flex items-center gap-2">
               <FlowwIcon size={24} />
-              <span className="text-sm text-gray-600">© 2024 Floww</span>
+              <span className="text-sm text-gray-600">© 2025 Floww</span>
             </div>
             <div className="flex gap-6">
               <a href="/privacy" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">
