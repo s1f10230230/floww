@@ -53,6 +53,9 @@ export async function POST(request: Request) {
       mode: 'subscription',
       success_url: `${origin}/dashboard?upgrade=success`,
       cancel_url: `${origin}/upgrade?canceled=true`,
+      automatic_tax: {
+        enabled: true,
+      },
       metadata: {
         user_id: user.id,
         plan_id: planId,
