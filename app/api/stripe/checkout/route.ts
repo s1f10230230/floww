@@ -53,6 +53,7 @@ export async function POST(request: Request) {
       mode: 'subscription',
       success_url: `${origin}/dashboard?upgrade=success`,
       cancel_url: `${origin}/upgrade?canceled=true`,
+      billing_address_collection: 'required', // 請求先住所を収集
       automatic_tax: {
         enabled: true,
       },
