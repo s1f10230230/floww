@@ -1,7 +1,7 @@
 import { MetadataRoute } from 'next'
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = 'https://floww-orpin.vercel.app'
+  const baseUrl = 'https://floww-app.dev'
 
   return [
     {

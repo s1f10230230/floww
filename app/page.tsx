@@ -51,7 +51,7 @@ export default function Home() {
       'サブスクリプション検出',
       'データ自動分類',
     ],
-    screenshot: 'https://floww-orpin.vercel.app/og-image.png',
+    screenshot: 'https://floww-app.dev/og-image.png',
   }
 
   return (

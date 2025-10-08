@@ -1,7 +1,7 @@
 import { MetadataRoute } from 'next'
 
 export default function robots(): MetadataRoute.Robots {
-  const baseUrl = 'https://floww-orpin.vercel.app'
+  const baseUrl = 'https://floww-app.dev'
 
   return {
     rules: [
