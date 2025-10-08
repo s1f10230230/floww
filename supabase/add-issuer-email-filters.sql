@@ -8,13 +8,14 @@ ALTER TABLE public.card_issuers
 -- Seed Rakuten Card filters
 UPDATE public.card_issuers
 SET
-  include_from_domains = ARRAY['mail.rakuten-card.co.jp'],
+  include_from_domains = ARRAY['mail.rakuten-card.co.jp','pay.rakuten.co.jp'],
   include_subject_keywords = ARRAY[
     'カード利用のお知らせ',
     '速報版',
     'ご請求',
     'ご請求金額',
-    'ご請求予定'
+    'ご請求予定',
+    'ご利用内容確認メール'
   ],
   exclude_subject_keywords = ARRAY[
     'キャンペーン','アンケート','通信','ニュース','ポイント進呈','プレゼント','抽選',
@@ -28,10 +29,14 @@ SET
   include_from_domains = ARRAY['qa.jcb.co.jp'],
   exclude_from_domains = ARRAY['cj.jcb.co.jp'],
   include_subject_keywords = ARRAY[
-    'ご利用','ショッピングご利用','ご請求','利用のお知らせ'
+    'ご利用',
+    'ショッピングご利用',
+    'ショッピングご利用のお知らせ',
+    'カードご利用通知',
+    'ご請求',
+    '利用のお知らせ'
   ],
   exclude_subject_keywords = ARRAY[
     'Spot Mail','キャンペーン','ご案内','ポイント','クーポン','おトク','特別価格'
   ]
 WHERE name = 'JCBカード';
-

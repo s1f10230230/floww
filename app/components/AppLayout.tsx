@@ -42,6 +42,7 @@ const navigation = [
 export default function AppLayout({ children, user }: AppLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true) // Default to open on desktop
   const [isMobile, setIsMobile] = useState(true) // Default to true to prevent SSR issues
+  const [userPlan, setUserPlan] = useState<any>(null)
   const pathname = usePathname()
   const router = useRouter()
 
@@ -58,6 +59,25 @@ export default function AppLayout({ children, user }: AppLayoutProps) {
     window.addEventListener('resize', checkMobile)
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
+
+  useEffect(() => {
+    const loadUserPlan = async () => {
+      if (!user) return
+
+      const supabase = createClient()
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*, subscription_plans(*)')
+        .eq('id', user.id)
+        .single()
+
+      if (profile?.subscription_plans) {
+        setUserPlan(profile.subscription_plans)
+      }
+    }
+
+    loadUserPlan()
+  }, [user])
 
   const handleSignOut = async () => {
     const supabase = createClient()
@@ -111,12 +131,12 @@ export default function AppLayout({ children, user }: AppLayoutProps) {
                   </p>
                   <p className="text-xs text-gray-500 flex items-center gap-1">
                     <Crown className="w-3 h-3" />
-                    Freeプラン
+                    {userPlan?.name || 'Free'}プラン
                   </p>
                 </div>
               )}
             </div>
-            {sidebarOpen && (
+            {sidebarOpen && userPlan?.name === 'Free' && (
               <Link
                 href="/upgrade"
                 className="mt-3 block w-full text-center py-2 px-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-medium rounded-lg hover:from-amber-600 hover:to-orange-600 transition-colors"
