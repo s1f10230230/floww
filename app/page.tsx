@@ -139,6 +139,13 @@ export default function Home() {
                   </svg>
                   メールは読み取り専用・安全です
                 </p>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-3">
+                  <p className="text-xs text-gray-700 leading-relaxed">
+                    <strong>Gmail データの使用について:</strong> Floww はクレジットカード会社から送信される利用通知メール（件名や本文）のみを読み取り、支出データとして自動記録します。メールの送信、削除、変更は一切行いません。詳細は
+                    <a href="/privacy" className="text-blue-600 hover:underline font-medium mx-1">プライバシーポリシー</a>
+                    をご確認ください。
+                  </p>
+                </div>
                 <p className="text-xs text-gray-500 mt-4 leading-relaxed">
                   ログインすることで、
                   <a href="/terms" className="text-blue-600 hover:underline font-medium mx-1">利用規約</a>
@@ -186,6 +193,70 @@ export default function Home() {
               <p className="text-gray-600 leading-relaxed">
                 定期的な支払いを自動で見つけて、解約忘れを防止します
               </p>
+            </div>
+          </div>
+
+          {/* Gmail Data Usage Section */}
+          <div className="mt-20 max-w-4xl mx-auto">
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-8 sm:p-12 border border-blue-100">
+              <div className="flex items-start gap-4 mb-6">
+                <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">Gmail データの使用について</h2>
+                  <div className="space-y-4 text-gray-700 leading-relaxed">
+                    <p>
+                      Floww は、クレジットカード会社から送信される<strong>利用通知メールのみ</strong>を自動で読み取り、支出データとして記録します。
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
+                      <div className="flex items-start gap-3">
+                        <svg className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        <div>
+                          <p className="font-semibold text-gray-900">読み取り専用</p>
+                          <p className="text-sm text-gray-600">メールの読み取りのみ。送信・削除・変更は一切行いません</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <svg className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        <div>
+                          <p className="font-semibold text-gray-900">限定的なアクセス</p>
+                          <p className="text-sm text-gray-600">クレジットカード利用通知メールのみを対象に読み取ります</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <svg className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        <div>
+                          <p className="font-semibold text-gray-900">安全な保管</p>
+                          <p className="text-sm text-gray-600">取得したデータは暗号化され、安全に保管されます</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <svg className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        <div>
+                          <p className="font-semibold text-gray-900">第三者非共有</p>
+                          <p className="text-sm text-gray-600">あなたのメールデータを第三者に共有・販売することはありません</p>
+                        </div>
+                      </div>
+                    </div>
+                    <p className="mt-6 text-sm">
+                      詳細なデータ取り扱いについては、
+                      <a href="/privacy" className="text-blue-600 hover:underline font-semibold mx-1">プライバシーポリシー</a>
+                      をご確認ください。
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
