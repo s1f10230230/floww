@@ -72,7 +72,7 @@ export default function RootLayout({
   return (
     <html lang="ja">
       <head>
-        <meta name="google-site-verification" content="DmV8aRaFymglZFe7rfVb_cUXJ0LjtXkCyIQQ5NnDPn8" />
+        <meta name="google-site-verification" content="cJMjwV14yRcmC7Cf3PQF-kXRSwqR5AjYCrBcDQGrljc" />
       </head>
       <body className={inter.className}>
         <Script
