@@ -103,7 +103,7 @@ export default function ImportPastEmailsPage() {
             <input
               type="file"
               id="file-upload"
-              accept=".mbox,.eml,.zip"
+              accept=".mbox,.eml"
               onChange={handleFileSelect}
               className="hidden"
             />
@@ -126,7 +126,7 @@ export default function ImportPastEmailsPage() {
                     ファイルを選択
                   </p>
                   <p className="text-sm text-gray-500">
-                    .mbox, .eml, .zip 形式に対応
+                    .mbox, .eml 形式（最大10MB）
                   </p>
                 </div>
               )}
@@ -176,7 +176,8 @@ export default function ImportPastEmailsPage() {
               <div className="text-sm text-amber-800">
                 <p className="font-medium mb-1">注意事項</p>
                 <ul className="space-y-1 list-disc list-inside">
-                  <li>ファイルサイズが大きい場合、処理に時間がかかります</li>
+                  <li>最大10MBまで（約1000通のメール相当）</li>
+                  <li>大きいファイルは分割してアップロードしてください</li>
                   <li>同じメールを重複して取り込むことはありません</li>
                   <li>カード会社からのメールのみ処理されます</li>
                 </ul>
