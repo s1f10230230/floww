@@ -25,19 +25,29 @@ export async function POST(request: NextRequest) {
 
     const userId = toMatch[1]
 
-    // Verify webhook signature (optional but recommended)
-    const signature = request.headers.get('x-twilio-email-event-webhook-signature')
-    if (signature && process.env.SENDGRID_WEBHOOK_VERIFICATION_KEY) {
-      const timestamp = request.headers.get('x-twilio-email-event-webhook-timestamp')
-      const payload = timestamp + await request.text()
-      const expectedSignature = crypto
-        .createHmac('sha256', process.env.SENDGRID_WEBHOOK_VERIFICATION_KEY)
-        .update(payload)
-        .digest('base64')
+    // Simple validation: Check if sender is from known card companies
+    // SendGrid Inbound Parse doesn't support signature verification
+    const knownCardIssuers = [
+      'rakuten-card.co.jp',
+      'smbc-card.com',
+      'jcb.co.jp',
+      'aeon.co.jp',
+      'saisoncard.co.jp',
+      'eposcard.co.jp',
+      'lifecard.co.jp',
+      'orico.co.jp'
+    ]
 
-      if (signature !== expectedSignature) {
-        return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
-      }
+    const isFromCardIssuer = knownCardIssuers.some(domain =>
+      from.toLowerCase().includes(domain)
+    )
+
+    if (!isFromCardIssuer) {
+      console.log(`[Inbound Email] Ignored non-card email from: ${from}`)
+      return NextResponse.json({
+        success: true,
+        message: 'Not a card company email'
+      })
     }
 
     // Save to database
