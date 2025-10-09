@@ -155,8 +155,15 @@ export async function POST(request: Request) {
 
   } catch (error: any) {
     console.error('[sync-emails-imap] Error:', error)
+
+    // Return detailed error information
     return NextResponse.json({
-      error: error.message || 'Failed to sync IMAP emails'
+      success: false,
+      error: error.message || 'Failed to sync IMAP emails',
+      errorDetails: {
+        name: error.name,
+        stack: error.stack?.split('\n').slice(0, 3).join('\n')
+      }
     }, { status: 500 })
   }
 }
