@@ -390,23 +390,23 @@ export default function Dashboard() {
             />
           </div>
 
-          {/* IMAP Setup Banner */}
+          {/* Email Setup Banner */}
           {!imapConfigured && (
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4">
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
               <div className="flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                <Mail className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-amber-900 mb-1">
-                    メール連携が未設定です
+                  <p className="text-sm font-medium text-blue-900 mb-1">
+                    メール連携で自動取込を開始
                   </p>
-                  <p className="text-xs text-amber-800 mb-3">
-                    クレジットカードの利用通知メールを自動取得するには、IMAP設定が必要です
+                  <p className="text-xs text-blue-800 mb-3">
+                    Gmail/Yahooの転送設定だけで、カード利用通知を自動取得できます（審査不要）
                   </p>
                   <button
-                    onClick={() => router.push('/settings/imap')}
-                    className="px-4 py-2 bg-amber-600 text-white text-sm font-medium rounded-lg hover:bg-amber-700 transition-colors"
+                    onClick={() => router.push('/settings/email-forward')}
+                    className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
                   >
-                    IMAP設定を行う
+                    メール転送設定を行う
                   </button>
                 </div>
               </div>
@@ -416,11 +416,11 @@ export default function Dashboard() {
           {/* Action buttons */}
           <div className="grid grid-cols-2 gap-2 sm:gap-3">
             <button
-              onClick={() => router.push('/settings/imap')}
+              onClick={() => router.push('/settings/email-forward')}
               className="flex items-center justify-center gap-2 px-4 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm font-medium"
             >
               <Mail className="w-4 h-4" />
-              <span>{imapConfigured ? 'IMAP設定' : 'メール連携設定'}</span>
+              <span>メール転送設定</span>
             </button>
             <button
               onClick={() => syncEmails()}

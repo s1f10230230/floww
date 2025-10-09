@@ -7,16 +7,12 @@ export async function GET(request: Request) {
 
   const supabase = await createClient()
 
-  // Supabase OAuth with Google + Gmail scope
+  // Supabase OAuth with Google (email and profile only - no Gmail API)
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      scopes: 'email profile https://www.googleapis.com/auth/gmail.readonly',
+      scopes: 'email profile',
       redirectTo: `${origin}/api/auth/callback`,
-      queryParams: {
-        access_type: 'offline',
-        prompt: 'consent',
-      },
     },
   })
 
