@@ -42,6 +42,7 @@ export default function Dashboard() {
   const [syncSummary, setSyncSummary] = useState<{ totalEmails?: number, processedEmails?: number, transactions?: number } | null>(null)
   const [issuerNames, setIssuerNames] = useState<string[]>([])
   const [gmailConnected, setGmailConnected] = useState(false)
+  const [imapConfigured, setImapConfigured] = useState(false)
   const [lastSyncAt, setLastSyncAt] = useState<Date | null>(null)
   const [lastHistoryId, setLastHistoryId] = useState<string | null>(null)
   const [selectedEmailId, setSelectedEmailId] = useState<string | null>(null)
@@ -96,6 +97,12 @@ export default function Dashboard() {
     .reduce((sum, s) => sum + s.amount, 0)
 
   const syncEmails = async (opts?: { useNextPage?: boolean }) => {
+    // Check IMAP configuration
+    if (!imapConfigured) {
+      toast.error('IMAP設定が必要です。メール連携設定から設定してください。')
+      return
+    }
+
     // Check sync frequency limit
     if (lastSyncAt && userPlan) {
       const now = new Date()
@@ -115,55 +122,31 @@ export default function Dashboard() {
 
     setSyncing(true)
     try {
-      const endpoint = process.env.NEXT_PUBLIC_USE_SYNC_V2 === 'true' ? '/api/sync-emails-v2' : '/api/sync-emails'
-      const body: any = {}
-      if (endpoint === '/api/sync-emails-v2') {
-        body.maxResults = maxResults
-        body.incrementalSync = incrementalSync
-        if (opts?.useNextPage && nextPageToken) body.pageToken = nextPageToken
-      }
-      const response = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+      // Use IMAP sync endpoint
+      const endpoint = '/api/sync-emails-imap'
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      })
       const data = await response.json()
 
       if (response.ok && data.success) {
-        // Show success message with details
-        let message = `✅ ${data.message}`
-        if (data.details) {
-          message += `\n\n詳細:\n`
-          message += `・取得メール数: ${data.details.totalEmails}件\n`
-          message += `・処理済み: ${data.details.processedEmails}件\n`
-          message += `・取引検出: ${data.details.transactions}件`
+        let message = `✅ メール同期完了\n\n`
+        message += `・取得メール数: ${data.totalFetched || 0}件\n`
+        message += `・処理済み: ${data.totalProcessed || 0}件\n`
+        message += `・新規取引: ${data.newTransactions || 0}件`
 
-          if (data.details.samples && data.details.samples.length > 0) {
-            message += `\n\nサンプル（最初の5件）:\n`
-            data.details.samples.forEach((email: any) => {
-              message += `・${email.from}: ${email.subject}\n`
-            })
-          }
-        }
-
-        // Dev-only: show parse confidences if available
-        const SHOW_CONF = process.env.NEXT_PUBLIC_SHOW_CONFIDENCE === 'true'
-        if (SHOW_CONF && data.dev && Array.isArray(data.dev) && data.dev.length > 0) {
-          message += `\n\n[DEV] 解析confidence（上位数件）:\n`
-          data.dev.slice(0, 10).forEach((d: any, idx: number) => {
-            const conf = Array.isArray(d.confidences) ? d.confidences.map((c: any) => Number(c).toFixed(2)).join(', ') : ''
-            message += `#${idx + 1} [${d.parser}] tx:${d.txCount} conf:[${conf}]\n   ${d.from} | ${d.subject}\n`
+        if (data.errors && data.errors.length > 0) {
+          message += `\n\n⚠️ エラー (${data.errors.length}件):\n`
+          data.errors.slice(0, 3).forEach((err: string) => {
+            message += `・${err}\n`
           })
         }
-        // Set summary + pagination state for v2
-        if (endpoint === '/api/sync-emails-v2') {
-          setSyncSummary({
-            totalEmails: data.details?.totalEmails,
-            processedEmails: data.details?.processedEmails,
-            transactions: data.details?.transactions
-          })
-          setHasMore(!!data.data?.hasMore || !!data.hasMore)
-          setNextPageToken(data.data?.nextPageToken || data.nextPageToken || null)
-        }
+
         toast.success(message)
         // Reload transactions
         await loadTransactions()
+        await checkImapConfigured()
       } else if (data.error) {
         toast.error(`エラー: ${data.error}`)
       }
@@ -269,6 +252,7 @@ export default function Dashboard() {
     loadTransactions()
     loadIssuerInfo()
     checkGmailConnected()
+    checkImapConfigured()
     loadSyncMeta()
   }, [])
 
@@ -313,6 +297,15 @@ export default function Dashboard() {
       .maybeSingle()
     setGmailConnected(!!profile?.gmail_refresh_token)
     if ((profile as any)?.last_sync_history_id) setLastHistoryId((profile as any).last_sync_history_id)
+  }
+
+  const checkImapConfigured = async () => {
+    const supabase = createClient()
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('imap_enabled')
+      .maybeSingle()
+    setImapConfigured(!!profile?.imap_enabled)
   }
 
   const loadSyncMeta = async () => {
@@ -387,21 +380,42 @@ export default function Dashboard() {
             />
           </div>
 
+          {/* IMAP Setup Banner */}
+          {!imapConfigured && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-amber-900 mb-1">
+                    メール連携が未設定です
+                  </p>
+                  <p className="text-xs text-amber-800 mb-3">
+                    クレジットカードの利用通知メールを自動取得するには、IMAP設定が必要です
+                  </p>
+                  <button
+                    onClick={() => router.push('/settings/imap')}
+                    className="px-4 py-2 bg-amber-600 text-white text-sm font-medium rounded-lg hover:bg-amber-700 transition-colors"
+                  >
+                    IMAP設定を行う
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Action buttons */}
           <div className="grid grid-cols-2 gap-2 sm:gap-3">
             <button
-              onClick={connectGmail}
-              className="flex items-center justify-center gap-2 px-4 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm font-medium"
+              onClick={() => router.push('/settings/imap')}
+              className="flex items-center justify-center gap-2 px-4 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm font-medium"
             >
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M24 5.457v13.909c0 .904-.732 1.636-1.636 1.636h-3.819V11.73L12 16.64l-6.545-4.91v9.273H1.636A1.636 1.636 0 0 1 0 19.366V5.457c0-2.023 2.309-3.178 3.927-1.964L5.455 4.64 12 9.548l6.545-4.91 1.528-1.145C21.69 2.28 24 3.434 24 5.457z"/>
-              </svg>
-              <span>Gmail連携</span>
+              <Mail className="w-4 h-4" />
+              <span>{imapConfigured ? 'IMAP設定' : 'メール連携設定'}</span>
             </button>
             <button
               onClick={() => syncEmails()}
-              disabled={syncing}
-              className="flex items-center justify-center gap-2 px-4 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 text-sm font-medium"
+              disabled={syncing || !imapConfigured}
+              className="flex items-center justify-center gap-2 px-4 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50 text-sm font-medium"
             >
               <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
               <span>{syncing ? '同期中...' : 'メール同期'}</span>
@@ -409,63 +423,19 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Sync controls */}
+        {/* Sync status */}
         <div className="bg-white p-4 rounded-xl shadow mb-6">
-          <div className="flex flex-wrap items-center gap-4">
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={incrementalSync}
-                onChange={e => setIncrementalSync(e.target.checked)}
-              />
-              増分同期（履歴IDを使用）
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              最大件数
-              <input
-                type="number"
-                min={50}
-                max={500}
-                step={50}
-                value={maxResults}
-                onChange={e => setMaxResults(Number(e.target.value))}
-                className="w-24 px-2 py-1 border rounded"
-              />
-            </label>
-            <div className="ml-auto flex items-center gap-2">
-              <button
-                onClick={() => syncEmails({ useNextPage: true })}
-                disabled={!hasMore || syncing}
-                className="px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded disabled:opacity-50"
-              >
-                次のページを同期{hasMore ? '' : '（なし）'}
-              </button>
-              {nextPageToken && (
-                <span className="text-xs text-gray-500">nextPageToken: {String(nextPageToken).slice(0, 12)}…</span>
-              )}
-            </div>
-          </div>
-
-          {/* Issuer + Gmail status */}
-          <div className="flex flex-wrap items-center gap-3 mt-3 text-sm">
-            <span className={`px-2 py-1 rounded ${gmailConnected ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
-              {gmailConnected ? 'Gmail連携済み' : 'Gmail未連携'}
+          <div className="flex flex-wrap items-center gap-3 text-sm">
+            <span className={`px-2 py-1 rounded ${imapConfigured ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+              {imapConfigured ? 'IMAP連携済み' : 'IMAP未連携'}
             </span>
             {issuerNames.length > 0 && (
               <span className="text-gray-600">対象カード会社: {issuerNames.join('・')}</span>
-            )}
-            {syncSummary && (
-              <span className="text-gray-600">
-                取得:{syncSummary.totalEmails || 0} / 処理:{syncSummary.processedEmails || 0} / 取引:{syncSummary.transactions || 0}
-              </span>
             )}
             {lastSyncAt && (
               <span className="text-gray-500">
                 最終同期: {format(lastSyncAt, 'yyyy/MM/dd HH:mm', { locale: ja })}
               </span>
-            )}
-            {lastHistoryId && (
-              <span className="text-xs text-gray-400">履歴ID: {String(lastHistoryId).slice(0, 12)}…</span>
             )}
           </div>
         </div>

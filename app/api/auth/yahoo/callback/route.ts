@@ -104,14 +104,19 @@ export async function GET(request: Request) {
       return NextResponse.redirect(`${origin}?error=Failed to save tokens`)
     }
 
-    // Check if user completed onboarding
+    // Check if user completed onboarding and IMAP setup
     const { data: profile } = await serviceClient
       .from('profiles')
-      .select('plan_id')
+      .select('plan_id, imap_enabled')
       .eq('id', userId)
       .single()
 
-    const redirectPath = profile?.plan_id ? '/dashboard' : '/onboarding'
+    // Redirect based on user status
+    let redirectPath = '/onboarding'
+    if (profile?.plan_id) {
+      // User has completed onboarding, check IMAP setup
+      redirectPath = profile.imap_enabled ? '/dashboard' : '/settings/imap'
+    }
     return NextResponse.redirect(`${origin}${redirectPath}`)
 
   } catch (error) {

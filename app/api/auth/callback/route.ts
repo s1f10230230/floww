@@ -62,15 +62,19 @@ export async function GET(request: Request) {
           console.log('Profile created/updated successfully')
         }
 
-        // Check if user already completed onboarding
+        // Check if user already completed onboarding and IMAP setup
         const { data: profile } = await serviceClient
           .from('profiles')
-          .select('plan_id')
+          .select('plan_id, imap_enabled')
           .eq('id', user.id)
           .single()
 
-        // Redirect to onboarding for first-time users, dashboard for returning users
-        const redirectPath = profile?.plan_id ? '/dashboard' : '/onboarding'
+        // Redirect based on user status
+        let redirectPath = '/onboarding'
+        if (profile?.plan_id) {
+          // User has completed onboarding, check IMAP setup
+          redirectPath = profile.imap_enabled ? '/dashboard' : '/settings/imap'
+        }
         return NextResponse.redirect(`${origin}${redirectPath}`)
       }
 
