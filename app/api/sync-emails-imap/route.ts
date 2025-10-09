@@ -210,8 +210,11 @@ function fetchEmailsViaImap(
             return resolve([])
           }
 
-          // Fetch all emails (no limit)
-          const fetch = imap.fetch(uids, { bodies: '' })
+          // Limit to 50 emails to avoid timeout (Vercel 10s limit)
+          const recentUids = uids.slice(-50)
+          console.log(`Found ${uids.length} emails, fetching last ${recentUids.length}`)
+
+          const fetch = imap.fetch(recentUids, { bodies: '' })
 
           fetch.on('message', (msg) => {
             msg.on('body', (stream) => {
