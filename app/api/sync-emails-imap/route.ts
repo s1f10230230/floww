@@ -96,17 +96,6 @@ export async function POST(request: Request) {
         const emailContent = `${email.subject}\n${email.text}`
         const parsedData = parseEmailV2(emailContent, email.from?.text || '')
 
-        // Debug: Log email structure and parse result
-        console.log('Email parsed:', {
-          from: email.from?.text,
-          subject: email.subject,
-          hasText: !!email.text,
-          textLength: email.text?.length || 0,
-          textPreview: email.text?.substring(0, 200),
-          hasHtml: !!email.html,
-          parsedTransactions: parsedData.transactions?.length || 0
-        })
-
         if (parsedData.transactions && parsedData.transactions.length > 0) {
           for (const txn of parsedData.transactions) {
             const { data: transaction } = await supabase
