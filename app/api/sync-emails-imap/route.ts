@@ -192,10 +192,8 @@ function fetchEmailsViaImap(
             return resolve([])
           }
 
-          // Limit to 100 most recent
-          const recentUids = uids.slice(-100)
-
-          const fetch = imap.fetch(recentUids, { bodies: '' })
+          // Fetch all emails (no limit)
+          const fetch = imap.fetch(uids, { bodies: '' })
 
           fetch.on('message', (msg) => {
             msg.on('body', (stream) => {
