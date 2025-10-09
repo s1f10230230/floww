@@ -44,6 +44,17 @@ export default function Home() {
     }
   }
 
+  const handleYahooLogin = async () => {
+    setLoading(true)
+    try {
+      // Redirect to Yahoo OAuth
+      window.location.href = '/api/auth/yahoo'
+    } catch (error) {
+      console.error('Login error:', error)
+      setLoading(false)
+    }
+  }
+
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'SoftwareApplication',
@@ -159,6 +170,29 @@ export default function Home() {
                       <path d="M23 12H12v11h11V12z" fill="#7fba00"/>
                     </svg>
                     <span>Microsoftで始める</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                onClick={handleYahooLogin}
+                disabled={loading}
+                className="w-full bg-white hover:bg-gray-50 text-gray-800 font-semibold py-4 px-8 rounded-xl text-lg border-2 border-gray-200 hover:border-gray-300 shadow-lg transition-all duration-200 hover:shadow-xl hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 mb-4"
+              >
+                {loading ? (
+                  <>
+                    <svg className="animate-spin h-5 w-5 text-gray-800" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>接続中...</span>
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none">
+                      <path d="M11.999 0c-6.626 0-12 5.373-12 12 0 6.627 5.374 12 12 12s12-5.373 12-12c0-6.627-5.374-12-12-12zm-4.431 17.655l-1.283-5.874-4.523 5.037.001-9.636 7.086 8.768c.241.301.194.74-.107.98-.301.241-.74.194-.981-.107zm9.668.107c-.242.3-.683.348-.983.107l-6.806-5.382 6.798-8.429.002 9.637-4.523-5.037-1.283 5.874 7.086 8.768c.24.301.194.74-.107.98z" fill="#5F01D1"/>
+                    </svg>
+                    <span>Yahooで始める</span>
                   </>
                 )}
               </button>
