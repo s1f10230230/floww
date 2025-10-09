@@ -31,13 +31,25 @@ export async function GET(request: Request) {
           updated_at: new Date().toISOString()
         }
 
-        // Add Gmail tokens if available
+        // Determine provider type
+        const provider = user.app_metadata?.provider || 'google'
+
+        // Add provider-specific tokens
         if (data.session.provider_token) {
-          profileData.gmail_access_token = data.session.provider_token
+          if (provider === 'azure' || provider === 'microsoft') {
+            profileData.microsoft_access_token = data.session.provider_token
+          } else {
+            profileData.gmail_access_token = data.session.provider_token
+          }
         }
         if (data.session.provider_refresh_token) {
-          profileData.gmail_refresh_token = data.session.provider_refresh_token
-          profileData.gmail_token_expiry = new Date(Date.now() + 3600 * 1000).toISOString()
+          if (provider === 'azure' || provider === 'microsoft') {
+            profileData.microsoft_refresh_token = data.session.provider_refresh_token
+            profileData.microsoft_token_expiry = new Date(Date.now() + 3600 * 1000).toISOString()
+          } else {
+            profileData.gmail_refresh_token = data.session.provider_refresh_token
+            profileData.gmail_token_expiry = new Date(Date.now() + 3600 * 1000).toISOString()
+          }
         }
 
         const { error: profileError } = await serviceClient
