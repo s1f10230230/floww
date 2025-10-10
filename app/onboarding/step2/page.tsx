@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/app/lib/supabase-client'
-import { Copy, Check, Mail, ArrowRight, X, Send } from 'lucide-react'
+import { Copy, Check, Mail, ArrowRight, X, Send, ChevronDown, ChevronUp } from 'lucide-react'
 import toast, { Toaster } from 'react-hot-toast'
 
 interface EmailProvider {
@@ -94,7 +94,7 @@ export default function OnboardingStep2() {
   const [forwardEmail, setForwardEmail] = useState('')
   const [filterText, setFilterText] = useState('')
   const [copied, setCopied] = useState<'email' | 'filter' | null>(null)
-  const [showModal, setShowModal] = useState(false)
+  const [showInstructions, setShowInstructions] = useState(false)
   const [autoConfirm, setAutoConfirm] = useState(true)
   const [testSending, setTestSending] = useState(false)
   const [testSuccess, setTestSuccess] = useState(false)
@@ -263,27 +263,93 @@ export default function OnboardingStep2() {
             </div>
           </div>
 
-          {/* Auto Confirm Checkbox */}
-          <div className="mb-6">
-            <label className="flex items-center gap-2 text-sm text-gray-700">
-              <input
-                type="checkbox"
-                checked={autoConfirm}
-                onChange={(e) => setAutoConfirm(e.target.checked)}
-                className="w-4 h-4 text-blue-600 rounded"
-              />
-              <span>確認コードは自動で処理します</span>
-            </label>
-          </div>
-
-          {/* Setup Button */}
+          {/* Instructions Accordion */}
           <button
-            onClick={() => setShowModal(true)}
+            onClick={() => setShowInstructions(!showInstructions)}
             className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-colors flex items-center justify-center gap-2 mb-4"
           >
-            <span>{selectedProvider.name}で設定する</span>
-            <ArrowRight className="w-5 h-5" />
+            <span>{selectedProvider.name}の設定手順を見る</span>
+            {showInstructions ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
           </button>
+
+          {showInstructions && (
+            <div className="mb-6 p-6 bg-gray-50 border border-gray-200 rounded-xl">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="text-3xl">{selectedProvider.icon}</div>
+                <h3 className="text-lg font-bold text-gray-900">
+                  {selectedProvider.name} 設定手順
+                </h3>
+              </div>
+
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-3 mb-4">
+                <p className="text-xs text-blue-900 font-medium mb-1">
+                  📍 青いボックス = 転送先アドレス
+                </p>
+                <p className="text-xs text-green-900 font-medium">
+                  📍 緑のボックス = フィルタ条件
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                {selectedProvider.setupSteps.map((step, index) => {
+                  // Extract if step mentions copying email or filter
+                  const mentionsEmail = step.includes('青いボックス')
+                  const mentionsFilter = step.includes('緑のボックス')
+
+                  return (
+                    <div key={index} className="bg-white rounded-lg p-3 border border-gray-200">
+                      <p className="text-sm text-gray-800 leading-relaxed mb-2">{step}</p>
+                      {mentionsEmail && (
+                        <div className="flex items-center gap-2 mt-2">
+                          <code className="flex-1 text-xs bg-blue-50 px-3 py-2 rounded border border-blue-200 font-mono">
+                            {forwardEmail}
+                          </code>
+                          <button
+                            onClick={() => copyToClipboard(forwardEmail, 'email')}
+                            className="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                          >
+                            {copied === 'email' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                          </button>
+                        </div>
+                      )}
+                      {mentionsFilter && (
+                        <div className="flex items-center gap-2 mt-2">
+                          <code className="flex-1 text-xs bg-green-50 px-3 py-2 rounded border border-green-200 font-mono">
+                            {filterText}
+                          </code>
+                          <button
+                            onClick={() => copyToClipboard(filterText, 'filter')}
+                            className="px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+                          >
+                            {copied === 'filter' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+
+              <div className="mt-4 bg-green-50 border border-green-200 rounded-lg p-4">
+                <p className="text-sm text-green-800 font-medium mb-1">
+                  ✅ 設定完了後の動作
+                </p>
+                <p className="text-xs text-green-700">
+                  カード利用通知が届くと、自動的にアプリに取引が追加されます。
+                </p>
+              </div>
+
+              <a
+                href={selectedProvider.setupUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-4 block w-full py-3 bg-blue-600 text-white text-center font-semibold rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+              >
+                <span>{selectedProvider.name}を開く</span>
+                <ArrowRight className="w-4 h-4" />
+              </a>
+            </div>
+          )}
 
           {/* Test Send Button */}
           <button
@@ -318,64 +384,6 @@ export default function OnboardingStep2() {
           </button>
         </div>
 
-        {/* Setup Modal */}
-        {showModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6">
-              <div className="flex justify-between items-center mb-6">
-                <div className="flex items-center gap-3">
-                  <div className="text-3xl">{selectedProvider.icon}</div>
-                  <h3 className="text-xl font-bold text-gray-900">
-                    {selectedProvider.name} 設定手順
-                  </h3>
-                </div>
-                <button
-                  onClick={() => setShowModal(false)}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 mb-6">
-                <p className="text-sm text-blue-900 font-medium mb-2">
-                  📍 「下の青いボックス」= 転送先アドレス
-                </p>
-                <p className="text-sm text-green-900 font-medium">
-                  📍 「下の緑のボックス」= フィルタ条件
-                </p>
-              </div>
-
-              <div className="space-y-3 mb-6">
-                {selectedProvider.setupSteps.map((step, index) => (
-                  <div key={index} className="bg-gray-50 rounded-lg p-3">
-                    <p className="text-sm text-gray-800 leading-relaxed">{step}</p>
-                  </div>
-                ))}
-              </div>
-
-              <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-6">
-                <p className="text-sm text-green-800 font-medium mb-2">
-                  ✅ 設定完了後の動作
-                </p>
-                <p className="text-xs text-green-700">
-                  カード利用通知が届くと、自動的にアプリに取引が追加されます。
-                </p>
-              </div>
-
-              <a
-                href={selectedProvider.setupUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={handleComplete}
-                className="block w-full py-4 bg-blue-600 text-white text-center font-semibold rounded-xl hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
-              >
-                <span>{selectedProvider.name}を開いて設定する</span>
-                <ArrowRight className="w-5 h-5" />
-              </a>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   )
