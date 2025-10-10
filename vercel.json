@@ -1,13 +1,8 @@
 {
   "functions": {
     "app/api/import/mbox/route.ts": {
-      "maxDuration": 60,
+      "maxDuration": 10,
       "memory": 1024
-    }
-  },
-  "api": {
-    "bodyParser": {
-      "sizeLimit": "20mb"
     }
   }
 }
