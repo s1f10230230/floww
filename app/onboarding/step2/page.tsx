@@ -21,14 +21,16 @@ const EMAIL_PROVIDERS: EmailProvider[] = [
     icon: '📧',
     setupUrl: 'https://mail.google.com/mail/u/0/#settings/fwdandpop',
     setupSteps: [
-      'Gmailを開いて右上の⚙️ → [すべての設定を表示]',
-      '[転送とPOP/IMAP] タブを開く',
-      '[転送先アドレスを追加] をクリック',
-      '下記の転送先アドレスを入力',
-      '確認コードが届いたら入力（自動検出されます）',
-      '[フィルタとブロック中のアドレス] → 新しいフィルタを作成',
-      '条件：From欄に下記のフィルタ条件をコピペ',
-      'アクション：[転送先に送信する] を選択'
+      '【STEP 1】Gmailを開いて、右上の歯車アイコン⚙️をクリック',
+      '【STEP 2】メニューから「すべての設定を表示」を選択',
+      '【STEP 3】上部タブの「転送とPOP/IMAP」をクリック',
+      '【STEP 4】「転送先アドレスを追加」ボタンを押す',
+      '【STEP 5】下の青いボックスの転送先アドレスをコピーして、ポップアップに貼り付け → 「次へ」',
+      '【STEP 6】確認コードが届くので入力（数分かかる場合があります）',
+      '【STEP 7】上部タブの「フィルタとブロック中のアドレス」をクリック',
+      '【STEP 8】「新しいフィルタを作成」を押す',
+      '【STEP 9】From欄に、下の緑のボックスのフィルタ条件をコピペ → 「フィルタを作成」',
+      '【STEP 10】「次のアドレスに転送する」にチェックを入れて、先ほどの転送先アドレスを選択 → 「フィルタを作成」'
     ]
   },
   {
@@ -37,13 +39,16 @@ const EMAIL_PROVIDERS: EmailProvider[] = [
     icon: '💌',
     setupUrl: 'https://mail.yahoo.co.jp/config/general',
     setupSteps: [
-      'Yahoo!メールを開いて [設定・利用規約]',
-      '[メールの設定] → [フィルター]',
-      '[フィルターを追加] をクリック',
-      'From（差出人）に下記のフィルタ条件をコピペ',
-      '転送先に下記の転送先アドレスをコピペ',
-      '確認コードが届いたら入力（自動検出されます）',
-      '[保存] をクリック'
+      '【STEP 1】Yahoo!メールを開いて、右上の「設定・利用規約」をクリック',
+      '【STEP 2】左メニューから「メールの設定」を選択',
+      '【STEP 3】「フィルター」をクリック',
+      '【STEP 4】「フィルターを追加」ボタンを押す',
+      '【STEP 5】フィルター名は「カード通知転送」などわかりやすい名前を入力',
+      '【STEP 6】From（差出人）の入力欄に、下の緑のボックスのフィルタ条件をコピペ',
+      '【STEP 7】アクションで「メールを転送する」を選択',
+      '【STEP 8】転送先に、下の青いボックスの転送先アドレスをコピペ',
+      '【STEP 9】確認コードが届いたら入力',
+      '【STEP 10】「保存」をクリック'
     ]
   },
   {
@@ -52,14 +57,16 @@ const EMAIL_PROVIDERS: EmailProvider[] = [
     icon: '📧',
     setupUrl: 'https://outlook.live.com/mail/0/options/mail/rules',
     setupSteps: [
-      'Outlookを開いて [設定] → [すべてのOutlook設定を表示]',
-      '[メール] → [転送]',
-      '[転送を有効にする] にチェック',
-      '下記の転送先アドレスを入力',
-      '確認コードが届いたら入力（自動検出されます）',
-      '[ルール] → [新しいルールを追加]',
-      '差出人に下記のフィルタ条件を入力',
-      'アクション：[転送先] を選択'
+      '【STEP 1】Outlookを開いて、右上の歯車⚙️をクリック',
+      '【STEP 2】「すべてのOutlook設定を表示」を選択',
+      '【STEP 3】左メニューから「メール」→「転送」を選択',
+      '【STEP 4】「転送を有効にする」にチェックを入れる',
+      '【STEP 5】転送先の入力欄に、下の青いボックスの転送先アドレスをコピペ → 「保存」',
+      '【STEP 6】確認コードが届いたら入力',
+      '【STEP 7】左メニューから「メール」→「ルール」を選択',
+      '【STEP 8】「新しいルールを追加」を押す',
+      '【STEP 9】条件で「差出人」を選択し、下の緑のボックスのフィルタ条件を入力',
+      '【STEP 10】アクションで「転送先」を選択し、先ほどの転送先アドレスを入力 → 「保存」'
     ]
   },
   {
@@ -68,14 +75,16 @@ const EMAIL_PROVIDERS: EmailProvider[] = [
     icon: '☁️',
     setupUrl: 'https://www.icloud.com/mail',
     setupSteps: [
-      'iCloud.comにアクセスして [メール] を開く',
-      '左下の⚙️ → [環境設定]',
-      '[ルール] タブを開く',
-      '[ルールを追加] をクリック',
-      '条件：差出人に下記のフィルタ条件を入力',
-      'アクション：[メッセージを転送] を選択',
-      '下記の転送先アドレスを入力',
-      '確認コードが届いたら入力（自動検出されます）'
+      '【STEP 1】iCloud.comにアクセスして、「メール」アプリを開く',
+      '【STEP 2】左下の歯車アイコン⚙️をクリック',
+      '【STEP 3】「環境設定」を選択',
+      '【STEP 4】「ルール」タブをクリック',
+      '【STEP 5】「ルールを追加」ボタンを押す',
+      '【STEP 6】「差出人が次の場合」を選択',
+      '【STEP 7】下の緑のボックスのフィルタ条件を入力',
+      '【STEP 8】アクションで「メッセージを次に転送」を選択',
+      '【STEP 9】下の青いボックスの転送先アドレスをコピペ',
+      '【STEP 10】確認コードが届いたら入力 → 「完了」をクリック'
     ]
   }
 ]
@@ -328,22 +337,22 @@ export default function OnboardingStep2() {
                 </button>
               </div>
 
-              <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6">
-                <p className="text-sm text-yellow-800">
-                  💡 <strong>重要：</strong>確認コードが届いたら自動で処理されます。数分お待ちください。
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 mb-6">
+                <p className="text-sm text-blue-900 font-medium mb-2">
+                  📍 「下の青いボックス」= 転送先アドレス
+                </p>
+                <p className="text-sm text-green-900 font-medium">
+                  📍 「下の緑のボックス」= フィルタ条件
                 </p>
               </div>
 
-              <ol className="space-y-4 mb-6">
+              <div className="space-y-3 mb-6">
                 {selectedProvider.setupSteps.map((step, index) => (
-                  <li key={index} className="flex gap-3">
-                    <div className="flex-shrink-0 w-7 h-7 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-semibold">
-                      {index + 1}
-                    </div>
-                    <p className="text-sm text-gray-700 pt-1">{step}</p>
-                  </li>
+                  <div key={index} className="bg-gray-50 rounded-lg p-3">
+                    <p className="text-sm text-gray-800 leading-relaxed">{step}</p>
+                  </div>
                 ))}
-              </ol>
+              </div>
 
               <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-6">
                 <p className="text-sm text-green-800 font-medium mb-2">
