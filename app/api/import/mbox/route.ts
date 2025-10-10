@@ -20,11 +20,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No file uploaded' }, { status: 400 })
     }
 
-    // Check file size (limit to 10MB to avoid timeout)
-    const maxSize = 10 * 1024 * 1024 // 10MB
+    // Check file size (limit to 20MB to avoid timeout)
+    const maxSize = 20 * 1024 * 1024 // 20MB
     if (file.size > maxSize) {
       return NextResponse.json({
-        error: `ファイルサイズが大きすぎます（最大10MB）。現在: ${(file.size / 1024 / 1024).toFixed(2)}MB`
+        error: `ファイルサイズが大きすぎます（最大20MB）。現在: ${(file.size / 1024 / 1024).toFixed(2)}MB`
       }, { status: 400 })
     }
 
