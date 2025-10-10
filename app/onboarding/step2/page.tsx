@@ -273,6 +273,18 @@ export default function OnboardingStep2() {
                 </h3>
               </div>
 
+              {/* Mobile Warning */}
+              <div className="mb-4 bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                <p className="text-xs text-yellow-800 font-medium mb-1">
+                  📱 スマホの方へ
+                </p>
+                <p className="text-xs text-yellow-700">
+                  リンクを開いた後、デスクトップ表示に切り替えてください<br/>
+                  • Safari: ぁあ → 「デスクトップ用Webサイト」<br/>
+                  • Chrome: ⋮ → 「PC版サイト」にチェック
+                </p>
+              </div>
+
               <a
                 href={selectedProvider.setupUrl}
                 target="_blank"
