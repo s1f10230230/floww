@@ -33,6 +33,14 @@ export default function ImportPastEmailsPage() {
         body: formData
       })
 
+      // Check if response is JSON
+      const contentType = response.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text()
+        console.error('Non-JSON response:', text)
+        throw new Error(`サーバーエラー: ${text.substring(0, 100)}`)
+      }
+
       const data = await response.json()
 
       if (response.ok && data.success) {
@@ -126,7 +134,7 @@ export default function ImportPastEmailsPage() {
                     ファイルを選択
                   </p>
                   <p className="text-sm text-gray-500">
-                    .mbox, .eml 形式（最大10MB）
+                    .mbox, .eml 形式（最大4MB）
                   </p>
                 </div>
               )}
@@ -176,7 +184,7 @@ export default function ImportPastEmailsPage() {
               <div className="text-sm text-amber-800">
                 <p className="font-medium mb-1">注意事項</p>
                 <ul className="space-y-1 list-disc list-inside">
-                  <li>最大10MBまで（約1000通のメール相当）</li>
+                  <li>最大4MBまで（約400通のメール相当）</li>
                   <li>大きいファイルは分割してアップロードしてください</li>
                   <li>同じメールを重複して取り込むことはありません</li>
                   <li>カード会社からのメールのみ処理されます</li>

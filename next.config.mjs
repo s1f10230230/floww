@@ -26,13 +26,6 @@ const nextConfig = {
   experimental: {
     optimizePackageImports: ['lucide-react', 'recharts'],
   },
-
-  // API route configuration
-  api: {
-    bodyParser: {
-      sizeLimit: '20mb',
-    },
-  },
 }
 
 export default nextConfig

@@ -20,11 +20,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No file uploaded' }, { status: 400 })
     }
 
-    // Check file size (limit to 20MB to avoid timeout)
-    const maxSize = 20 * 1024 * 1024 // 20MB
+    // Check file size (Vercel Hobby plan limit: 4.5MB)
+    const maxSize = 4 * 1024 * 1024 // 4MB (conservative to avoid Vercel 4.5MB limit)
     if (file.size > maxSize) {
       return NextResponse.json({
-        error: `ファイルサイズが大きすぎます（最大20MB）。現在: ${(file.size / 1024 / 1024).toFixed(2)}MB`
+        error: `ファイルサイズが大きすぎます（最大4MB）。現在: ${(file.size / 1024 / 1024).toFixed(2)}MB。大きいファイルは分割してください。`
       }, { status: 400 })
     }
 
