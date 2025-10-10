@@ -21,25 +21,22 @@ const EMAIL_PROVIDERS: EmailProvider[] = [
     icon: '📧',
     setupUrl: 'https://mail.google.com/mail/u/0/#settings/fwdandpop',
     setupSteps: [
-      '【STEP 1】Gmailを開いて、右上の歯車アイコン⚙️をクリック',
-      '【STEP 2】メニューから「すべての設定を表示」を選択',
-      '【STEP 3】上部タブの「転送とPOP/IMAP」をクリック',
-      '【STEP 4】「転送先アドレスを追加」ボタンを押す',
-      '【STEP 5】下の青いボックスの転送先アドレスをコピーして、ポップアップに貼り付け → 「次へ」',
-      '【STEP 6】確認コードが届くので入力（数分かかる場合があります）',
-      '【STEP 7】上部タブの「フィルタとブロック中のアドレス」をクリック',
-      '【STEP 8】「新しいフィルタを作成」を押す',
-      '【STEP 9】From欄に、下の緑のボックスのフィルタ条件をコピペ → 「フィルタを作成」',
-      '【STEP 10】「次のアドレスに転送する」にチェックを入れて、先ほどの転送先アドレスを選択 → 「フィルタを作成」'
+      '【STEP 1】「転送先アドレスを追加」ボタンを押す',
+      '【STEP 2】下の青いボックスの転送先アドレスをコピーして、ポップアップに貼り付け → 「次へ」',
+      '【STEP 3】確認コードが届くので入力（数分かかる場合があります）',
+      '【STEP 4】上部タブの「フィルタとブロック中のアドレス」をクリック',
+      '【STEP 5】「新しいフィルタを作成」を押す',
+      '【STEP 6】From欄に、下の緑のボックスのフィルタ条件をコピペ → 「フィルタを作成」',
+      '【STEP 7】「次のアドレスに転送する」にチェックを入れて、先ほどの転送先アドレスを選択 → 「フィルタを作成」'
     ]
   },
   {
     id: 'yahoo',
     name: 'Yahoo',
     icon: '💌',
-    setupUrl: 'https://mail.yahoo.co.jp/config/general',
+    setupUrl: 'https://mail.yahoo.co.jp/',
     setupSteps: [
-      '【STEP 1】Yahoo!メールを開いて、右上の「設定・利用規約」をクリック',
+      '【STEP 1】右上の「設定・利用規約」をクリック',
       '【STEP 2】左メニューから「メールの設定」を選択',
       '【STEP 3】「フィルター」をクリック',
       '【STEP 4】「フィルターを追加」ボタンを押す',
@@ -55,18 +52,15 @@ const EMAIL_PROVIDERS: EmailProvider[] = [
     id: 'outlook',
     name: 'Outlook',
     icon: '📧',
-    setupUrl: 'https://outlook.live.com/mail/0/options/mail/rules',
+    setupUrl: 'https://outlook.live.com/mail/0/options/mail/forwarding',
     setupSteps: [
-      '【STEP 1】Outlookを開いて、右上の歯車⚙️をクリック',
-      '【STEP 2】「すべてのOutlook設定を表示」を選択',
-      '【STEP 3】左メニューから「メール」→「転送」を選択',
-      '【STEP 4】「転送を有効にする」にチェックを入れる',
-      '【STEP 5】転送先の入力欄に、下の青いボックスの転送先アドレスをコピペ → 「保存」',
-      '【STEP 6】確認コードが届いたら入力',
-      '【STEP 7】左メニューから「メール」→「ルール」を選択',
-      '【STEP 8】「新しいルールを追加」を押す',
-      '【STEP 9】条件で「差出人」を選択し、下の緑のボックスのフィルタ条件を入力',
-      '【STEP 10】アクションで「転送先」を選択し、先ほどの転送先アドレスを入力 → 「保存」'
+      '【STEP 1】「転送を有効にする」にチェックを入れる',
+      '【STEP 2】転送先の入力欄に、下の青いボックスの転送先アドレスをコピペ → 「保存」',
+      '【STEP 3】確認コードが届いたら入力',
+      '【STEP 4】左メニューから「ルール」を選択',
+      '【STEP 5】「新しいルールを追加」を押す',
+      '【STEP 6】条件で「差出人」を選択し、下の緑のボックスのフィルタ条件を入力',
+      '【STEP 7】アクションで「転送先」を選択し、先ほどの転送先アドレスを入力 → 「保存」'
     ]
   },
   {
@@ -75,16 +69,14 @@ const EMAIL_PROVIDERS: EmailProvider[] = [
     icon: '☁️',
     setupUrl: 'https://www.icloud.com/mail',
     setupSteps: [
-      '【STEP 1】iCloud.comにアクセスして、「メール」アプリを開く',
-      '【STEP 2】左下の歯車アイコン⚙️をクリック',
-      '【STEP 3】「環境設定」を選択',
-      '【STEP 4】「ルール」タブをクリック',
-      '【STEP 5】「ルールを追加」ボタンを押す',
-      '【STEP 6】「差出人が次の場合」を選択',
-      '【STEP 7】下の緑のボックスのフィルタ条件を入力',
-      '【STEP 8】アクションで「メッセージを次に転送」を選択',
-      '【STEP 9】下の青いボックスの転送先アドレスをコピペ',
-      '【STEP 10】確認コードが届いたら入力 → 「完了」をクリック'
+      '【STEP 1】左下の歯車アイコン⚙️をクリック → 「環境設定」を選択',
+      '【STEP 2】「ルール」タブをクリック',
+      '【STEP 3】「ルールを追加」ボタンを押す',
+      '【STEP 4】「差出人が次の場合」を選択',
+      '【STEP 5】下の緑のボックスのフィルタ条件を入力',
+      '【STEP 6】アクションで「メッセージを次に転送」を選択',
+      '【STEP 7】下の青いボックスの転送先アドレスをコピペ',
+      '【STEP 8】確認コードが届いたら入力 → 「完了」をクリック'
     ]
   }
 ]
@@ -281,6 +273,16 @@ export default function OnboardingStep2() {
                 </h3>
               </div>
 
+              <a
+                href={selectedProvider.setupUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mb-4 block w-full py-3 bg-blue-600 text-white text-center font-semibold rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+              >
+                <span>{selectedProvider.name}を開く</span>
+                <ArrowRight className="w-4 h-4" />
+              </a>
+
               <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-3 mb-4">
                 <p className="text-xs text-blue-900 font-medium mb-1">
                   📍 青いボックス = 転送先アドレス
@@ -338,16 +340,6 @@ export default function OnboardingStep2() {
                   カード利用通知が届くと、自動的にアプリに取引が追加されます。
                 </p>
               </div>
-
-              <a
-                href={selectedProvider.setupUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-4 block w-full py-3 bg-blue-600 text-white text-center font-semibold rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
-              >
-                <span>{selectedProvider.name}を開く</span>
-                <ArrowRight className="w-4 h-4" />
-              </a>
             </div>
           )}
 
