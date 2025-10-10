@@ -35,7 +35,11 @@ export default function ImportPastEmailsPage() {
       }
 
       const timestamp = Date.now()
-      const filePath = `${user.id}/${timestamp}-${file.name}`
+      // Sanitize filename: remove special characters, spaces, and Japanese
+      const sanitizedFileName = file.name
+        .replace(/[^\w.-]/g, '_') // Replace non-alphanumeric (except dot, dash) with underscore
+        .replace(/_{2,}/g, '_')    // Replace multiple underscores with single
+      const filePath = `${user.id}/${timestamp}-${sanitizedFileName}`
 
       toast.loading('ファイルをアップロード中...')
 
