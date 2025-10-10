@@ -13,23 +13,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const formData = await request.formData()
-    const file = formData.get('file') as File
+    // Get storage file path from request body
+    const body = await request.json()
+    const { filePath } = body
 
-    if (!file) {
-      return NextResponse.json({ error: 'No file uploaded' }, { status: 400 })
+    if (!filePath) {
+      return NextResponse.json({ error: 'No file path provided' }, { status: 400 })
     }
 
-    // Check file size (Vercel Hobby plan limit: 4.5MB)
-    const maxSize = 4 * 1024 * 1024 // 4MB (conservative to avoid Vercel 4.5MB limit)
-    if (file.size > maxSize) {
+    // Download file from Supabase Storage
+    const { data: fileData, error: downloadError } = await supabase.storage
+      .from('email-imports')
+      .download(filePath)
+
+    if (downloadError || !fileData) {
       return NextResponse.json({
-        error: `ファイルサイズが大きすぎます（最大4MB）。現在: ${(file.size / 1024 / 1024).toFixed(2)}MB。大きいファイルは分割してください。`
-      }, { status: 400 })
+        error: 'ファイルのダウンロードに失敗しました: ' + downloadError?.message
+      }, { status: 500 })
     }
 
     // Read file content
-    const buffer = Buffer.from(await file.arrayBuffer())
+    const buffer = Buffer.from(await fileData.arrayBuffer())
     const content = buffer.toString('utf-8')
 
     // Known card issuer domains for filtering
@@ -141,6 +145,11 @@ export async function POST(request: NextRequest) {
         continue
       }
     }
+
+    // Delete the file from storage after processing
+    await supabase.storage
+      .from('email-imports')
+      .remove([filePath])
 
     return NextResponse.json({
       success: true,

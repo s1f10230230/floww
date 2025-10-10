@@ -25,12 +25,41 @@ export default function ImportPastEmailsPage() {
 
     setUploading(true)
     try {
-      const formData = new FormData()
-      formData.append('file', file)
+      // Step 1: Upload to Supabase Storage
+      const { createClient } = await import('@/app/lib/supabase-client')
+      const supabase = createClient()
 
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        throw new Error('ログインが必要です')
+      }
+
+      const timestamp = Date.now()
+      const filePath = `${user.id}/${timestamp}-${file.name}`
+
+      toast.loading('ファイルをアップロード中...')
+
+      const { error: uploadError } = await supabase.storage
+        .from('email-imports')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        })
+
+      if (uploadError) {
+        throw new Error('アップロード失敗: ' + uploadError.message)
+      }
+
+      toast.dismiss()
+      toast.loading('メールを処理中...')
+
+      // Step 2: Process the uploaded file
       const response = await fetch('/api/import/mbox', {
         method: 'POST',
-        body: formData
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ filePath })
       })
 
       // Check if response is JSON
@@ -43,6 +72,8 @@ export default function ImportPastEmailsPage() {
 
       const data = await response.json()
 
+      toast.dismiss()
+
       if (response.ok && data.success) {
         setResult(data)
         toast.success(`${data.emailsProcessed}件のメールを処理しました！`)
@@ -51,6 +82,7 @@ export default function ImportPastEmailsPage() {
       }
     } catch (error: any) {
       console.error('Upload error:', error)
+      toast.dismiss()
       toast.error('アップロードエラー: ' + error.message)
     } finally {
       setUploading(false)
@@ -134,7 +166,7 @@ export default function ImportPastEmailsPage() {
                     ファイルを選択
                   </p>
                   <p className="text-sm text-gray-500">
-                    .mbox, .eml 形式（最大4MB）
+                    .mbox, .eml 形式（最大20MB）
                   </p>
                 </div>
               )}
@@ -184,7 +216,7 @@ export default function ImportPastEmailsPage() {
               <div className="text-sm text-amber-800">
                 <p className="font-medium mb-1">注意事項</p>
                 <ul className="space-y-1 list-disc list-inside">
-                  <li>最大4MBまで（約400通のメール相当）</li>
+                  <li>最大20MBまで（約2000通のメール相当）</li>
                   <li>大きいファイルは分割してアップロードしてください</li>
                   <li>同じメールを重複して取り込むことはありません</li>
                   <li>カード会社からのメールのみ処理されます</li>
